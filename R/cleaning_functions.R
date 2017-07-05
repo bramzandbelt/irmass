@@ -120,7 +120,7 @@ get_col_types <- function(file_type){
                             s2OnsDt = col_double(),
                             s2Dur = col_double(),
                             s2DurDt = col_double(),
-                            waitedForTrigger = col_double(),
+                            waitedForTrigger = col_logical(),
                             keyCount_f = col_integer(),
                             keyCount_h = col_integer(),
                             keyCount_v = col_integer(),
@@ -130,8 +130,6 @@ get_col_types <- function(file_type){
                             rt1_v = col_double(),
                             rt1_b = col_double(),
                             rt1_mean = col_double(),
-                            rt1_min = col_double(),
-                            rt1_max = col_double(),
                             `rtDiff1_f-h` = col_double(),
                             `rtDiff1_v-b` = col_double(),
                             rtDiff1_mean = col_double(),
@@ -303,5 +301,15 @@ preproc_trial_logs <- function(data) {
 
 }
 
+# ==============================================================================
 
-
+#' Verifies index columns
+#'
+#' Identifies index columns, replaces NaNs with NAs, and converts objects to integer
+verify_ix_cols <- function(df) {
+  col_vector <- stringr::str_subset(colnames(df),".*Ix$")
+  df[col_vector] <- df[col_vector] %>%
+    purrr::map(~ stringr::str_replace(.x, "nan", "NA")) %>%
+    purrr::map(~ as.integer(.x))
+  df
+}

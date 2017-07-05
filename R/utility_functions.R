@@ -1,25 +1,3 @@
-#' Verify critirion met columns
-#'
-#' Identifies CritMet columns, converts values to logical
-verify_crit_met_cols <- function(df) {
-  col_vector <- stringr::str_subset(colnames(prac_block_data),".*CritMet.*")
-  df[col_vector] <- df[col_vector] %>%
-    purrr::map(~ stringr::str_replace(.x, "nan", "NA")) %>%
-    purrr::map(~ as.logical(.x))
-  df
-
-}
-
-#' Verifies index columns
-#'
-#' Identifies index columns, replaces NaNs with NAs, and converts objects to integer
-verify_ix_cols <- function(df) {
-  col_vector <- stringr::str_subset(colnames(df),".*Ix$")
-  df[col_vector] <- df[col_vector] %>%
-    purrr::map(~ stringr::str_replace(.x, "nan", "NA")) %>%
-    purrr::map(~ as.integer(.x))
-  df
-}
 
 #' WHAT IT DOES
 #'
