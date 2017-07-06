@@ -1,6 +1,62 @@
 # Cleaning functions
 
 
+#' Tidy block data
+#'
+#' Tidying involves multiple steps, including aggregating no-signal performance trial performance across go-signal levels, renaming variables, and assessing performance criteria on the basis of aggregate measures.
+tidy_block_data <- function(df) {
+
+AS_condition <-
+  ((blockIx == 1) & (taskVersionId == "A")) |
+  ((blockIx == 2) & (taskVersionId == "B"))
+SS_condition <-
+  ((blockIx == 2) & (taskVersionId == "A")) |
+  ((blockIx == 1) & (taskVersionId == "B"))
+
+  clean_df <-
+    df %>%
+    dplyr::mutate(block_type = ifelse(stringr::str_detect(blockId, '^e.*'),
+                                      "mixed",
+                                      ifelse(blockIx == 0,
+                                             "NS",
+                                             ifelse(AS_condition,
+                                                    "AS",
+                                                    ifelse(SS_condition,
+                                                           "SS",
+                                                           ifelse(blockIx == 3,
+                                                                  "mixed",
+                                                                  NA_character_
+                                                                  )
+                                                           )
+                                                    )
+                                             )
+                                      )
+    ) %>%
+    dplyr::mutate(NS_accuracy = pmin(s1Acc_00,s1Acc_01),
+                  NS_mean_RT = pmax(s1MeanRt_00,s1MeanRt_01),
+                  NS_mean_RTdiff = pmax(s1MeanRtDiff_00,s1MeanRtDiff_01)
+    ) %>%
+    dplyr::rename(SL_accuracy = s2Acc_00,
+                  SR_accuracy = s2Acc_01,
+                  SB_accuracy = s2Acc_02,
+                  IG_accuracy = s2Acc_03
+    ) %>%
+    dplyr::mutate(NS_accuracy_failed = NS_accuracy < 85,
+                  NS_mean_RT_failed = NS_mean_RT > 650,
+                  NS_mean_RTdiff_failed = NS_mean_RTdiff > 50,
+                  SL_accuracy_failed = SL_accuracy < 20,
+                  SR_accuracy_failed = SR_accuracy < 20,
+                  SB_accuracy_failed = SB_accuracy < 20,
+                  IG_accuracy_failed = IG_accuracy < 80
+    ) %>%
+    dplyr::select(subjectIx, blockId, iterIx,
+                  NS_accuracy, NS_mean_RT, NS_mean_RTdiff,
+                  SL_accuracy, SR_accuracy, SB_accuracy, IG_accuracy,
+                  NS_accuracy_failed, NS_mean_RT_failed, NS_mean_RTdiff_failed,
+                  SL_accuracy_failed, SR_accuracy_failed, SB_accuracy_failed, IG_accuracy_failed
+    )
+
+}
 
 #' Get column types for extracting data from csv files
 #'
@@ -26,6 +82,7 @@ get_col_types <- function(file_type){
                             ),
          block_cols =
            readr::cols_only(subjectIx = col_integer(),
+                            taskVersionId = col_character(),
                             blockId = col_character(),
                             blockIx = col_integer(),
                             iterIx = col_double(),
@@ -85,8 +142,6 @@ get_col_types <- function(file_type){
                             rt1_e = col_double(),
                             rt1_a = col_double(),
                             rt1_mean = col_double(),
-                            rt1_min = col_double(),
-                            rt1_max = col_double(),
                             `rtDiff1_f-b` = col_double(),
                             `rtDiff1_e-a` = col_double(),
                             rtDiff1_mean = col_double(),
