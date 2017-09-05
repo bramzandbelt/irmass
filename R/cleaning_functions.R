@@ -1,29 +1,26 @@
 # Cleaning functions
 
+# ==============================================================================
 
 #' Tidy block data
 #'
 #' Tidying involves multiple steps, including aggregating no-signal performance trial performance across go-signal levels, renaming variables, and assessing performance criteria on the basis of aggregate measures.
 tidy_block_data <- function(df) {
 
-AS_condition <-
-  ((blockIx == 1) & (taskVersionId == "A")) |
-  ((blockIx == 2) & (taskVersionId == "B"))
-SS_condition <-
-  ((blockIx == 2) & (taskVersionId == "A")) |
-  ((blockIx == 1) & (taskVersionId == "B"))
 
   clean_df <-
     df %>%
     dplyr::mutate(block_type = ifelse(stringr::str_detect(blockId, '^e.*'),
                                       "mixed",
-                                      ifelse(blockIx == 0,
+                                      ifelse(.$blockIx == 0,
                                              "NS",
-                                             ifelse(AS_condition,
+                                             ifelse(((.$blockIx == 1) & (.$taskVersionId == "A")) |
+                                                      ((.$blockIx == 2) & (.$taskVersionId == "B")),
                                                     "AS",
-                                                    ifelse(SS_condition,
+                                                    ifelse(((.$blockIx == 2) & (.$taskVersionId == "A")) |
+                                                             ((.$blockIx == 1) & (.$taskVersionId == "B")),
                                                            "SS",
-                                                           ifelse(blockIx == 3,
+                                                           ifelse(.$blockIx == 3,
                                                                   "mixed",
                                                                   NA_character_
                                                                   )
@@ -49,176 +46,48 @@ SS_condition <-
                   SB_accuracy_failed = SB_accuracy < 20,
                   IG_accuracy_failed = IG_accuracy < 80
     ) %>%
-    dplyr::select(subjectIx, blockId, iterIx,
+    dplyr::select(subjectIx, blockId, block_type,
                   NS_accuracy, NS_mean_RT, NS_mean_RTdiff,
                   SL_accuracy, SR_accuracy, SB_accuracy, IG_accuracy,
                   NS_accuracy_failed, NS_mean_RT_failed, NS_mean_RTdiff_failed,
                   SL_accuracy_failed, SR_accuracy_failed, SB_accuracy_failed, IG_accuracy_failed
-    )
+    ) %>%
+    dplyr::group_by(subjectIx,blockId) %>%
+    dplyr::mutate(attempt = 1:n()) %>%
+    dplyr::ungroup()
 
+  general_cols <-  c("subjectIx","blockId","block_type","attempt")
+  performance_cols <- c("NS_accuracy","NS_mean_RT","NS_mean_RTdiff","SL_accuracy","SR_accuracy","SB_accuracy","IG_accuracy")
+  failure_cols <- colnames(clean_df) %>% .[stringr::str_detect(., ".*failed$")]
+
+  tidy_performance_stats <-
+    clean_df %>%
+    tidyr::gather_(gather_cols = performance_cols,
+                   key_col = "criterion",
+                   value_col = "performance") %>%
+    dplyr::select_(.dots = c(general_cols,"criterion","performance"))
+
+  tidy_failure_stats <-
+    clean_df %>%
+    dplyr::select_(.dots = c(general_cols,failure_cols)) %>%
+    setNames(gsub("_failed","",names(.))) %>%
+    tidyr::gather_(gather_cols = performance_cols,
+                   key_col = "criterion",
+                   value_col = "failed") %>%
+    dplyr::select_(.dots = c(general_cols,"criterion","failed"))
+
+  dplyr::left_join(tidy_performance_stats,tidy_failure_stats,
+                   by = c(general_cols,"criterion")) %>%
+    dplyr::arrange(subjectIx, blockId, attempt, criterion)
 }
 
-#' Get column types for extracting data from csv files
+# ==============================================================================
+
+#' Tidy trial data
 #'
-get_col_types <- function(file_type){
-
-  # blocklog_raw
-  # blocklog_preproc
-  #
-  # triallog_raw
-  # triallog_preproc
-  # triallog_compliant
-
-
-  switch(tolower(file_type),
-         sess_cols =
-           readr::cols_only(subjectIx = col_integer(),
-                            sessDate = col_date(format = "%Y-%m-%d"),
-                            studyId = col_character(),
-                            experimenterId = col_character(),
-                            taskVersionId = col_character(),
-                            responseDevice = col_character(),
-                            blockId = col_character()
-                            ),
-         block_cols =
-           readr::cols_only(subjectIx = col_integer(),
-                            taskVersionId = col_character(),
-                            blockId = col_character(),
-                            blockIx = col_integer(),
-                            iterIx = col_double(),
-                            s1Acc_00 = col_double(),
-                            s1AccCritMet_00 = col_logical(),
-                            s1Acc_01 = col_double(),
-                            s1AccCritMet_01 = col_logical(),
-                            s2Acc_00 = col_double(),
-                            s2AccCritMet_00 = col_logical(),
-                            s2Acc_01 = col_double(),
-                            s2AccCritMet_01 = col_logical(),
-                            s2Acc_02 = col_double(),
-                            s2AccCritMet_02 = col_logical(),
-                            s2Acc_03 = col_double(),
-                            s2AccCritMet_03 = col_logical(),
-                            s1MeanRt_00 = col_double(),
-                            s1MeanRtCritMet_00 = col_logical(),
-                            s1MeanRt_01 = col_double(),
-                            s1MeanRtCritMet_01 = col_logical(),
-                            s1MeanRtDiff_00 = col_double(),
-                            s1MeanRtDiffCritMet_00 = col_logical(),
-                            s1MeanRtDiff_01 = col_double(),
-                            s1MeanRtDiffCritMet_01 = col_logical()
-                            ),
-         trial_cols =
-           readr::cols_only(subjectIx = col_integer(),
-                            blockId = col_character(),
-                            blockIx = col_integer(),
-                            trialIx = col_integer(),
-                            fixIx = col_integer(),
-                            s1Ix = col_integer(),
-                            s2Ix = col_double(),
-                            soaIx = col_double(),
-                            tSession = col_time(format = "%H:%M:%S"),
-                            tBlock = col_time(format = "%H:%M:%OS"),
-                            trialOns = col_double(),
-                            trialDur = col_double(),
-                            fixOns = col_double(),
-                            fixOnsDt = col_double(),
-                            fixDur = col_double(),
-                            fixDurDt = col_double(),
-                            s1Ons = col_double(),
-                            s1OnsDt = col_double(),
-                            s1Dur = col_double(),
-                            s1DurDt = col_double(),
-                            s2Ons = col_double(),
-                            s2OnsDt = col_double(),
-                            s2Dur = col_double(),
-                            s2DurDt = col_double(),
-                            waitedForTrigger = col_double(),
-                            keyCount_f = col_integer(),
-                            keyCount_b = col_integer(),
-                            keyCount_e = col_integer(),
-                            keyCount_a = col_integer(),
-                            rt1_f = col_double(),
-                            rt1_b = col_double(),
-                            rt1_e = col_double(),
-                            rt1_a = col_double(),
-                            rt1_mean = col_double(),
-                            `rtDiff1_f-b` = col_double(),
-                            `rtDiff1_e-a` = col_double(),
-                            rtDiff1_mean = col_double(),
-                            trialCorrect = col_logical(),
-                            trialType = col_character(),
-                            responseType = col_character(),
-                            trialFeedback = col_character()
-                            ),
-         trial_cols_sub00 =
-           readr::cols_only(subjectIx = col_integer(),
-                            blockId = col_character(),
-                            blockIx = col_integer(),
-                            trialIx = col_integer(),
-                            fixIx = col_integer(),
-                            s1Ix = col_integer(),
-                            s2Ix = col_double(),
-                            soaIx = col_double(),
-                            tSession = col_time(format = "%H:%M:%S"),
-                            tBlock = col_time(format = "%H:%M:%OS"),
-                            trialOns = col_double(),
-                            trialDur = col_double(),
-                            fixOns = col_double(),
-                            fixOnsDt = col_double(),
-                            fixDur = col_double(),
-                            fixDurDt = col_double(),
-                            s1Ons = col_double(),
-                            s1OnsDt = col_double(),
-                            s1Dur = col_double(),
-                            s1DurDt = col_double(),
-                            s2Ons = col_double(),
-                            s2OnsDt = col_double(),
-                            s2Dur = col_double(),
-                            s2DurDt = col_double(),
-                            waitedForTrigger = col_logical(),
-                            keyCount_f = col_integer(),
-                            keyCount_h = col_integer(),
-                            keyCount_v = col_integer(),
-                            keyCount_b = col_integer(),
-                            rt1_f = col_double(),
-                            rt1_h = col_double(),
-                            rt1_v = col_double(),
-                            rt1_b = col_double(),
-                            rt1_mean = col_double(),
-                            `rtDiff1_f-h` = col_double(),
-                            `rtDiff1_v-b` = col_double(),
-                            rtDiff1_mean = col_double(),
-                            trialCorrect = col_character(),
-                            trialType = col_character(),
-                            responseType = col_character(),
-                            trialFeedback = col_character()
-                            )
-         )
-}
-
-
-#' Preprocesses raw triallog files from participant 1
-#'
-#' Participant one had a slightly different key mapping than the other participants, because
-preproc_trial_logs_sub01 <- function() {
-
-}
-
-#' Splits log files into a session table and a block/trial table
-#'
-split_log_in_multi_table <- function(df) {
-
-  session_data <-
-    df %>%
-    select(studyId:sessTime, -rngSeed) %>%
-    distinct()
-}
-
-
-
-#' Preprocesses the raw triallog files as to format data preregistration
-#'
-preproc_trial_logs <- function(data) {
+#' Tidying involves the following steps
+#' - renaming and computing variables in line with preregistration
+tidy_trial_data <- function(df) {
 
   # Manipulated variables (see §2.5.1. of the preregistration) =================
 
@@ -227,14 +96,14 @@ preproc_trial_logs <- function(data) {
   # t_d - stop-signal delay
   # t_d_alt - alternative stop-signal delay category
 
-  data <-
-    mutate(data,
-           s1 = ifelse(s1Ix == 0,
-                       "M",
-                       ifelse(s1Ix == 1,
-                              "I",
-                              NA_integer_)
-                       ),
+  clean_df <-
+    df %>%
+    dplyr::mutate(s1 = ifelse(s1Ix == 0,
+                              "M",
+                              ifelse(s1Ix == 1,
+                                     "I",
+                                     NA_integer_)
+                              ),
            trial = ifelse(is.na(s2Ix),
                           "NS",
                           ifelse(s2Ix == 0,
@@ -246,10 +115,10 @@ preproc_trial_logs <- function(data) {
                                                ifelse(s2Ix == 3,
                                                       "IG",
                                                       NA_integer_)
-                                               )
                                         )
                                  )
-                          ),
+                          )
+           ),
            t_d = round((s2Ons - s2OnsDt) - (s1Ons - s1OnsDt), digits = 3),
            t_d_alt = ifelse(soaIx %in% 0:2,
                             "short",
@@ -258,30 +127,28 @@ preproc_trial_logs <- function(data) {
                                    ifelse(soaIx == 4,
                                           "long",
                                           NA_character_
-                                          )
                                    )
                             )
-           ) %>%
+           )
+    ) %>%
 
-  # Measured variables (see § 2.5.2. of the pre-registration) ==================
+    # Measured variables (see § 2.5.2. of the pre-registration) ==================
 
   # Finger-level response count (RC_{finger})
   # Finger-level response time (RT_{finger})
 
-    rename(data,
-           RC_LM = keyCount_f,
-           RC_RM = keyCount_b,
-           RC_LI = keyCount_e,
-           RC_RI = keyCount_a,
-           ) %>%
-    rename(.,
-           RT_LM = rt1_f,
-           RT_RM = rt1_b,
-           RT_LI = rt1_e,
-           RT_RI = rt1_a
-           ) %>%
+  dplyr::rename(RC_LM = keyCount_f,
+                RC_RM = keyCount_b,
+                RC_LI = keyCount_e,
+                RC_RI = keyCount_a,
+  ) %>%
+    dplyr::rename(RT_LM = rt1_f,
+                  RT_RM = rt1_b,
+                  RT_LI = rt1_e,
+                  RT_RI = rt1_a
+    ) %>%
 
-  # Indices (see § 2.5.3. of the pre-registration) ===========================
+    # Indices (see § 2.5.3. of the pre-registration) ===========================
 
   # Response category ----------------------------------------------------------
   # - RB:   Bimanual response, fingers compatible with the go-stimulus
@@ -293,42 +160,42 @@ preproc_trial_logs <- function(data) {
   # - NR:   No response
   # - NOC:  Not otherwise classified
 
-    mutate(r = case_when(
-      .$s1 == "M" & .$RC_LM == 1 & .$RC_RM == 1 & .$RC_LI == 0 & .$RC_RI == 0 ~ "RB",
-      .$s1 == "M" & .$RC_LM == 1 & .$RC_RM == 0 & .$RC_LI == 0 & .$RC_RI == 0 ~ "RL",
-      .$s1 == "M" & .$RC_LM == 0 & .$RC_RM == 1 & .$RC_LI == 0 & .$RC_RI == 0 ~ "RR",
-      .$s1 == "M" & .$RC_LM == 0 & .$RC_RM == 0 & .$RC_LI == 1 & .$RC_RI == 1 ~ "RBO",
-      .$s1 == "M" & .$RC_LM == 0 & .$RC_RM == 0 & .$RC_LI == 1 & .$RC_RI == 0 ~ "RLO",
-      .$s1 == "M" & .$RC_LM == 0 & .$RC_RM == 0 & .$RC_LI == 0 & .$RC_RI == 1 ~ "RRO",
-      .$s1 == "M" & .$RC_LM == 0 & .$RC_RM == 0 & .$RC_LI == 0 & .$RC_RI == 0 ~ "NR",
-      .$s1 == "I" & .$RC_LM == 0 & .$RC_RM == 0 & .$RC_LI == 1 & .$RC_RI == 1 ~ "RB",
-      .$s1 == "I" & .$RC_LM == 0 & .$RC_RM == 0 & .$RC_LI == 1 & .$RC_RI == 0 ~ "RL",
-      .$s1 == "I" & .$RC_LM == 0 & .$RC_RM == 0 & .$RC_LI == 0 & .$RC_RI == 1 ~ "RR",
-      .$s1 == "I" & .$RC_LM == 1 & .$RC_RM == 1 & .$RC_LI == 0 & .$RC_RI == 0 ~ "RBO",
-      .$s1 == "I" & .$RC_LM == 1 & .$RC_RM == 0 & .$RC_LI == 0 & .$RC_RI == 0 ~ "RLO",
-      .$s1 == "I" & .$RC_LM == 0 & .$RC_RM == 1 & .$RC_LI == 0 & .$RC_RI == 0 ~ "RRO",
-      .$s1 == "I" & .$RC_LM == 0 & .$RC_RM == 0 & .$RC_LI == 0 & .$RC_RI == 0 ~ "NR"
-      )
-      ) %>%
+  dplyr::mutate(r = dplyr::case_when(
+    .$s1 == "M" & .$RC_LM == 1 & .$RC_RM == 1 & .$RC_LI == 0 & .$RC_RI == 0 ~ "RB",
+    .$s1 == "M" & .$RC_LM == 1 & .$RC_RM == 0 & .$RC_LI == 0 & .$RC_RI == 0 ~ "RL",
+    .$s1 == "M" & .$RC_LM == 0 & .$RC_RM == 1 & .$RC_LI == 0 & .$RC_RI == 0 ~ "RR",
+    .$s1 == "M" & .$RC_LM == 0 & .$RC_RM == 0 & .$RC_LI == 1 & .$RC_RI == 1 ~ "RBO",
+    .$s1 == "M" & .$RC_LM == 0 & .$RC_RM == 0 & .$RC_LI == 1 & .$RC_RI == 0 ~ "RLO",
+    .$s1 == "M" & .$RC_LM == 0 & .$RC_RM == 0 & .$RC_LI == 0 & .$RC_RI == 1 ~ "RRO",
+    .$s1 == "M" & .$RC_LM == 0 & .$RC_RM == 0 & .$RC_LI == 0 & .$RC_RI == 0 ~ "NR",
+    .$s1 == "I" & .$RC_LM == 0 & .$RC_RM == 0 & .$RC_LI == 1 & .$RC_RI == 1 ~ "RB",
+    .$s1 == "I" & .$RC_LM == 0 & .$RC_RM == 0 & .$RC_LI == 1 & .$RC_RI == 0 ~ "RL",
+    .$s1 == "I" & .$RC_LM == 0 & .$RC_RM == 0 & .$RC_LI == 0 & .$RC_RI == 1 ~ "RR",
+    .$s1 == "I" & .$RC_LM == 1 & .$RC_RM == 1 & .$RC_LI == 0 & .$RC_RI == 0 ~ "RBO",
+    .$s1 == "I" & .$RC_LM == 1 & .$RC_RM == 0 & .$RC_LI == 0 & .$RC_RI == 0 ~ "RLO",
+    .$s1 == "I" & .$RC_LM == 0 & .$RC_RM == 1 & .$RC_LI == 0 & .$RC_RI == 0 ~ "RRO",
+    .$s1 == "I" & .$RC_LM == 0 & .$RC_RM == 0 & .$RC_LI == 0 & .$RC_RI == 0 ~ "NR"
+  )
+  ) %>%
 
-    mutate(r = ifelse(is.na(r),
-                      "NOC",
-                      r
-                      )
-           ) %>%
+    dplyr::mutate(r = ifelse(is.na(r),
+                             "NOC",
+                             r
+                             )
+                  ) %>%
 
     # Bimanual response recorded (r_{bi})
-    mutate(r_bi = ifelse(r %in% c("RB","RBO"),
-                    TRUE,
-                    FALSE
-                    )
-           ) %>%
+    dplyr::mutate(r_bi = ifelse(r %in% c("RB","RBO"),
+                                TRUE,
+                                FALSE
+                                )
+                  ) %>%
 
     # Trial-level response time (RT_{trial})
-    mutate(RT_trial = rt1_mean) %>%
+    dplyr::mutate(RT_trial = rt1_mean) %>%
 
-    # Trial label - performance ($trial_{performance}$) ------------------------
-    mutate(trial_performance = case_when(
+    # Trial label - performance ($trial_{performance}$)
+    dplyr::mutate(trial_performance = dplyr::case_when(
       .$trial == "NS" & .$r == "RB" ~ "NS_correct",
       .$trial == "NS" & .$r == "RBO" ~ "NS_commission-error-bi",
       .$trial == "NS" & .$r %in% c("RL","RR","RLO","RRO") ~ "NS_commission-error-uni",
@@ -351,9 +218,166 @@ preproc_trial_logs <- function(data) {
       .$trial == "IG" & .$r %in% c("RL","RR","RLO","RRO") ~ "IG_commission-error-uni",
       .$trial == "IG" & .$r == "NOC" ~ "IG_commission-error-other",
       .$trial == "IG" & .$r == "NR" ~ "IG_omission-error"
-    )
-    )
+      )
+      )
 
+  RT_df <-
+    clean_df %>%
+    dplyr::select(subjectIx, blockIx, trialIx, trial, r, t_d, t_d_alt, RT_trial)
+
+  resp_df <-
+    clean_df %>%
+    dplyr::select(subjectIx, blockIx, trialIx, trial, r, t_d, t_d_alt, r_bi, trialCorrect)
+
+  list(RT_df = RT_df, resp_df = resp_df)
+}
+
+# ==============================================================================
+
+#' Get column types for extracting data from csv files
+#'
+get_col_types <- function(file_type){
+
+  # blocklog_raw
+  # blocklog_preproc
+  #
+  # triallog_raw
+  # triallog_preproc
+  # triallog_compliant
+
+
+  switch(tolower(file_type),
+         sess_cols =
+           readr::cols_only(subjectIx = readr::col_integer(),
+                            sessDate = readr::col_date(format = "%Y-%m-%d"),
+                            studyId = readr::col_character(),
+                            experimenterId = readr::col_character(),
+                            taskVersionId = readr::col_character(),
+                            responseDevice = readr::col_character(),
+                            blockId = readr::col_character()
+                            ),
+         block_cols =
+           readr::cols_only(subjectIx = readr::col_integer(),
+                            taskVersionId = readr::col_character(),
+                            blockId = readr::col_character(),
+                            blockIx = readr::col_integer(),
+                            s1Acc_00 = readr::col_double(),
+                            s1AccCritMet_00 = readr::col_logical(),
+                            s1Acc_01 = readr::col_double(),
+                            s1AccCritMet_01 = readr::col_logical(),
+                            s2Acc_00 = readr::col_double(),
+                            s2AccCritMet_00 = readr::col_logical(),
+                            s2Acc_01 = readr::col_double(),
+                            s2AccCritMet_01 = readr::col_logical(),
+                            s2Acc_02 = readr::col_double(),
+                            s2AccCritMet_02 = readr::col_logical(),
+                            s2Acc_03 = readr::col_double(),
+                            s2AccCritMet_03 = readr::col_logical(),
+                            s1MeanRt_00 = readr::col_double(),
+                            s1MeanRtCritMet_00 = readr::col_logical(),
+                            s1MeanRt_01 = readr::col_double(),
+                            s1MeanRtCritMet_01 = readr::col_logical(),
+                            s1MeanRtDiff_00 = readr::col_double(),
+                            s1MeanRtDiffCritMet_00 = readr::col_logical(),
+                            s1MeanRtDiff_01 = readr::col_double(),
+                            s1MeanRtDiffCritMet_01 = readr::col_logical()
+                            ),
+         trial_cols =
+           readr::cols_only(subjectIx = readr::col_integer(),
+                            blockId = readr::col_character(),
+                            blockIx = readr::col_integer(),
+                            trialIx = readr::col_integer(),
+                            fixIx = readr::col_integer(),
+                            s1Ix = readr::col_integer(),
+                            s2Ix = readr::col_double(),
+                            soaIx = readr::col_double(),
+                            tSession = readr::col_time(format = "%H:%M:%S"),
+                            tBlock = readr::col_time(format = "%H:%M:%OS"),
+                            trialOns = readr::col_double(),
+                            trialDur = readr::col_double(),
+                            fixOns = readr::col_double(),
+                            fixOnsDt = readr::col_double(),
+                            fixDur = readr::col_double(),
+                            fixDurDt = readr::col_double(),
+                            s1Ons = readr::col_double(),
+                            s1OnsDt = readr::col_double(),
+                            s1Dur = readr::col_double(),
+                            s1DurDt = readr::col_double(),
+                            s2Ons = readr::col_double(),
+                            s2OnsDt = readr::col_double(),
+                            s2Dur = readr::col_double(),
+                            s2DurDt = readr::col_double(),
+                            keyCount_f = readr::col_integer(),
+                            keyCount_b = readr::col_integer(),
+                            keyCount_e = readr::col_integer(),
+                            keyCount_a = readr::col_integer(),
+                            rt1_f = readr::col_double(),
+                            rt1_b = readr::col_double(),
+                            rt1_e = readr::col_double(),
+                            rt1_a = readr::col_double(),
+                            rt1_mean = readr::col_double(),
+                            `rtDiff1_f-b` = readr::col_double(),
+                            `rtDiff1_e-a` = readr::col_double(),
+                            rtDiff1_mean = readr::col_double(),
+                            trialCorrect = readr::col_logical(),
+                            trialType = readr::col_character(),
+                            responseType = readr::col_character(),
+                            trialFeedback = readr::col_character()
+                            ),
+         trial_cols_sub00 =
+           readr::cols_only(subjectIx = readr::col_integer(),
+                            blockId = readr::col_character(),
+                            blockIx = readr::col_integer(),
+                            trialIx = readr::col_integer(),
+                            fixIx = readr::col_integer(),
+                            s1Ix = readr::col_integer(),
+                            s2Ix = readr::col_double(),
+                            soaIx = readr::col_double(),
+                            tSession = readr::col_time(format = "%H:%M:%S"),
+                            tBlock = readr::col_time(format = "%H:%M:%OS"),
+                            trialOns = readr::col_double(),
+                            trialDur = readr::col_double(),
+                            fixOns = readr::col_double(),
+                            fixOnsDt = readr::col_double(),
+                            fixDur = readr::col_double(),
+                            fixDurDt = readr::col_double(),
+                            s1Ons = readr::col_double(),
+                            s1OnsDt = readr::col_double(),
+                            s1Dur = readr::col_double(),
+                            s1DurDt = readr::col_double(),
+                            s2Ons = readr::col_double(),
+                            s2OnsDt = readr::col_double(),
+                            s2Dur = readr::col_double(),
+                            s2DurDt = readr::col_double(),
+                            keyCount_f = readr::col_integer(),
+                            keyCount_h = readr::col_integer(),
+                            keyCount_v = readr::col_integer(),
+                            keyCount_b = readr::col_integer(),
+                            rt1_f = readr::col_double(),
+                            rt1_h = readr::col_double(),
+                            rt1_v = readr::col_double(),
+                            rt1_b = readr::col_double(),
+                            rt1_mean = readr::col_double(),
+                            `rtDiff1_f-h` = readr::col_double(),
+                            `rtDiff1_v-b` = readr::col_double(),
+                            rtDiff1_mean = readr::col_double(),
+                            trialCorrect = readr::col_character(),
+                            trialType = readr::col_character(),
+                            responseType = readr::col_character(),
+                            trialFeedback = readr::col_character()
+                            )
+         )
+
+}
+
+#' Splits log files into a session table and a block/trial table
+#'
+split_log_in_multi_table <- function(df) {
+
+  session_data <-
+    df %>%
+    dplyr::select(studyId:sessTime, -rngSeed) %>%
+    dplyr::distinct()
 }
 
 # ==============================================================================
