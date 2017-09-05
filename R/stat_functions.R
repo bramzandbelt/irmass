@@ -1,3 +1,13 @@
+#' Show trial numbers for al trial types and all individuals
+#'
+#' @param df a tidied data frame containing the performance data
+show_trial_numbers <- function(df) {
+  df %>%
+    dplyr::group_by(subjectIx,trial,t_d) %>%
+    dplyr::summarise(count = n()) %>%
+    tidyr::spread(key = subjectIx, value = count)
+}
+
 #' Test of inhibition function for individual-level data
 #'
 #' Tests the independent race model's qualitative prediction that the probability of responding given a stop-signal increases as a function of stop-signal delay, in individual-level data.
