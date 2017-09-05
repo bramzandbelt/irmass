@@ -1,37 +1,38 @@
-
+#' Get default ggplot theme settings to be used in this project
+#'
 theme_irmass <- function() {
 
   title_font_size <- 10
   subtitle_font_size <- 8
   label_font_size <- 5
 
-  theme_few() +
-    theme(plot.title = element_text(face = "bold",
-                                    size = title_font_size,
-                                    hjust = 0.5),
-
-          axis.line = element_blank(),
-          axis.text = element_text(size = label_font_size),
-          axis.text.x = element_text(angle = 45,
+  ggthemes::theme_few() +
+    ggplot2::theme(
+      plot.title = ggplot2::element_text(face = "bold",
+                                         size = title_font_size,
+                                         hjust = 0.5),
+      axis.line = ggplot2::element_blank(),
+      axis.text = ggplot2::element_text(size = label_font_size),
+      axis.text.x = ggplot2::element_text(angle = 45,
                                      hjust = 0.5),
-          axis.ticks = element_blank(),
-          axis.title = element_text(size = subtitle_font_size),
+      axis.ticks = ggplot2::element_blank(),
+      axis.title = ggplot2::element_text(size = subtitle_font_size),
 
-          legend.background = element_rect(),
-          legend.position = "none",
-          legend.text = element_text(size = label_font_size),
-          legend.title = element_text(size = subtitle_font_size),
+      legend.background = ggplot2::element_rect(),
+      legend.position = "none",
+      legend.text = ggplot2::element_text(size = label_font_size),
+      legend.title = ggplot2::element_text(size = subtitle_font_size),
 
-          panel.background = element_blank(),
-          panel.border = element_blank(),
-          panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(),
-          panel.spacing = unit(0.01,"in"),
+      panel.background = ggplot2::element_blank(),
+      panel.border = ggplot2::element_blank(),
+      panel.grid.major = ggplot2::element_blank(),
+      panel.grid.minor = ggplot2::element_blank(),
+      panel.spacing = ggplot2::unit(0.01,"in"),
 
-          # strip.background = element_rect(),
-          # strip.text = element_text(size = subtitle_font_size),
-          strip.background = element_blank(),
-          strip.text = element_blank()
+      # strip.background = ggplot2::element_rect(),
+      # strip.text = ggplot2::element_text(size = subtitle_font_size),
+      strip.background = ggplot2::element_blank(),
+      strip.text = ggplot2::element_blank()
 
     )
 }
@@ -58,98 +59,98 @@ plot_srrt_vs_nsrt_idv <- function() {
 #' Plot stop-respond RT vs. no-signal RT for group-level data
 #'
 plot_srrt_vs_nsrt_grp <- function(data, ns, sr) {
-  ggplot(data = data,
-         aes(x = data[[ns]],
-             y = data[[sr]],
-             color = is_outlier
-             )
-         ) +
-
-    geom_point(shape = 21) +
-    geom_abline(intercept = 0,
-                slope = 1,
-                linetype = "dashed"
-    ) +
-    geom_vline(xintercept = 0.65,
-               linetype = "dotted"
-    ) +
-    scale_x_continuous(name = "Mean no-signal RT (s)",
-                       limits = c(0.45, 0.75)
-    ) +
-    scale_y_continuous(name = "Mean stop-respond RT (s)",
-                       limits = c(0.45, 0.75)
-    ) +
-    theme_few() +
-    th +
-    theme(aspect.ratio = 1)
+  # ggplot2::ggplot(data = data,
+  #                 ggplot2::aes(x = data[[ns]],
+  #                              y = data[[sr]],
+  #                              color = is_outlier
+  #                              )
+  #                 ) +
+  #
+  #   ggplot2::geom_point(shape = 21) +
+  #   ggplot2::geom_abline(intercept = 0,
+  #                        slope = 1,
+  #                        linetype = "dashed"
+  #                        ) +
+  #   ggplot2::geom_vline(xintercept = 0.65,
+  #                       linetype = "dotted"
+  #   ) +
+  #   ggplot2::scale_x_continuous(name = "Mean no-signal RT (s)",
+  #                               limits = c(0.45, 0.75)
+  #   ) +
+  #   ggplot2::scale_y_continuous(name = "Mean stop-respond RT (s)",
+  #                               limits = c(0.45, 0.75)
+  #   ) +
+  #   ggthemes::theme_few() +
+  #   irmass::theme_irmass() +
+  #   ggplot2::theme(aspect.ratio = 1)
 }
 
 #' Plot stop-respond RT vs. stop-signal delay for individual-level data
 #'
 plot_srrt_vs_ssd_idv <- function() {
-  ggplot(df,
-         aes(x = t_d_alt,
-             y = RT_trial)
-         ) +
-
-    facet_wrap("subjectIx",
-               nrow = 2
-               ) +
-
-    geom_rect(aes(fill = log10B),
-              xmin = -Inf,
-              xmax = Inf,
-              ymin = -Inf,
-              ymax = Inf,
-              alpha = 0.3
-              ) +
-
-    geom_quasirandom(fill = NA,
-                     shape = 42,
-                     size = 2,
-                     stroke = 0.25,
-                     alpha = 0.5
-                     ) +
-
-    geom_point(data = df_summary,
-               aes(x = t_d_alt,
-                   y = mean_RT),
-               shape = 45,
-               size = 5
-               ) +
-
-    geom_text(data = df_summary,
-              aes(label = sprintf("log['10'](B['01']) == %.02f",log10B)),
-              x = 2,
-              y = 0.3,
-              size = 1,
-              parse = TRUE
-    ) +
-
-    scale_fill_gradient2(midpoint = 0,
-                         low = "#91bfdb",
-                         mid = "#ffffbf",
-                         high = "#fc8d59",
-                         name = expression(log['10'](B['01'])),
-                         breaks = colorbar_breaks,
-                         limits = colorbar_limits,
-                         oob = squish) +
-    scale_x
-    scale_y_continuous(breaks = seq(from = 0.2,to = 1.2, by = 0.2),
-                       minor_breaks = seq(from = 0.2,to = 1.2, by = 0.02),
-                       limits = c(0.2,1.2)) +
-    xlab("Stop-signal delay category") +
-    ylab("Response time (s)") +
-    ggtitle("Stop-respond response time as a function of stop-signal delay") +
-    theme_few() +
-    theme_irmass +
-    theme(axis.text.x = element_text(angle = 0),
-          plot.margin = margin(1,1,1,1),
-          plot.background = element_rect(colour = "red", size = 1),
-          panel.background = element_rect(colour = "blue", size = 1),
-          strip.background = element_rect(colour = "yellow", size = 1),
-          legend.margin = margin(0,0,0,0),
-          legend.background = element_rect(colour = "green", size = 1))
+  # ggplot2::ggplot(df,
+  #                 ggplot2::aes(x = t_d_alt,
+  #                              y = RT_trial)
+  #                 ) +
+  #
+  #   ggplot2::facet_wrap("subjectIx",
+  #                       nrow = 2
+  #                       ) +
+  #
+  #   ggplot2::geom_rect(ggplot2::aes(fill = log10B),
+  #                      xmin = -Inf,
+  #                      xmax = Inf,
+  #                      ymin = -Inf,
+  #                      ymax = Inf,
+  #                      alpha = 0.3
+  #                      ) +
+  #
+  #   ggbeeswarm::geom_quasirandom(fill = NA,
+  #                                shape = 42,
+  #                                size = 2,
+  #                                stroke = 0.25,
+  #                                alpha = 0.5
+  #                                ) +
+  #
+  #   ggplot2::geom_point(data = df_summary,
+  #                       ggplot2::aes(x = t_d_alt,
+  #                       y = mean_RT),
+  #                       shape = 45,
+  #                       size = 5
+  #                       ) +
+  #
+  #   ggplot2::geom_text(data = df_summary,
+  #                      ggplot2::aes(label = sprintf("log['10'](B['01']) == %.02f",log10B)),
+  #                      x = 2,
+  #                      y = 0.3,
+  #                      size = 1,
+  #                      parse = TRUE
+  #                      ) +
+  #
+  #   ggplot2::scale_fill_gradient2(midpoint = 0,
+  #                                 low = "#91bfdb",
+  #                                 mid = "#ffffbf",
+  #                                 high = "#fc8d59",
+  #                                 name = expression(log['10'](B['01'])),
+  #                                 breaks = colorbar_breaks,
+  #                                 limits = colorbar_limits,
+  #                        oob = squish) +
+  #   scale_x
+  #   scale_y_continuous(breaks = seq(from = 0.2,to = 1.2, by = 0.2),
+  #                      minor_breaks = seq(from = 0.2,to = 1.2, by = 0.02),
+  #                      limits = c(0.2,1.2)) +
+  #   xlab("Stop-signal delay category") +
+  #   ylab("Response time (s)") +
+  #   ggtitle("Stop-respond response time as a function of stop-signal delay") +
+  #   theme_few() +
+  #   theme_irmass +
+  #   theme(axis.text.x = element_text(angle = 0),
+  #         plot.margin = margin(1,1,1,1),
+  #         plot.background = element_rect(colour = "red", size = 1),
+  #         panel.background = element_rect(colour = "blue", size = 1),
+  #         strip.background = element_rect(colour = "yellow", size = 1),
+  #         legend.margin = margin(0,0,0,0),
+  #         legend.background = element_rect(colour = "green", size = 1))
 
 }
 
