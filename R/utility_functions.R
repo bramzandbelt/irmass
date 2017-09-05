@@ -1,3 +1,17 @@
+verify_output_dirs <- function(base_dirs, notebook_name) {
+  #' Checks if directories for notebook output exists, and if not creates them
+  #'
+  #' @param base_dirs A list of directories in which subdirectories should be created, if they don't exist
+  #' @param notebook_name Name of subdir
+  #'
+
+  for (base_dir in base_dirs) {
+    if (!dir.exists(file.path(base_dir,notebook_name))) {
+      dir.create(file.path(base_dir,notebook_name), recursive = TRUE)
+    }
+  }
+}
+
 
 #' WHAT IT DOES
 #'
@@ -11,9 +25,9 @@
 #'
 #' Selection of performance log files based on stage ("practice", "experiment") and file type ("trial", "block").
 #'
-#' @param stage
-#' @param filetype
-select_log_files <- function(stage = "experiment",filetype = "trial") {
+#' @param stage Study stage: practice or experiment
+#' @param filetype File type: triallog or blocklog
+select_log_files <- function(stage = "experiment",filetype = "triallog") {
 
   # We to need process experiment triallog files from subj00 differently than the others, because of different key namings (this is not the case for triallog from practice session and the blocklogs)
 
@@ -58,42 +72,40 @@ select_log_files <- function(stage = "experiment",filetype = "trial") {
   }
 }
 
-
+#' Reads logs files
+#'
+#' @param files files: list of files
+#' @param data_type Data type (char): trial_data, block_data, sess_data
 read_log_files <- function(files, data_type) {
 
   switch(tolower(data_type),
          sess_data =
            files %>%
-           map_df(~read_csv(.x,
-                            col_types = get_col_types("sess_cols")
-                            )
-                  ) %>%
-           distinct(subjectIx, .keep_all = TRUE),
+           purrr::map_df(~readr::read_csv(.x,
+                                          col_types = get_col_types("sess_cols")
+                                          )
+                         ) %>%
+           dplyr::distinct(subjectIx, .keep_all = TRUE),
 
          block_data =
            files %>%
-           map_df(~read_csv(.x,
-                            col_types = get_col_types("block_cols")
-                            )
-                  ),
+           purrr::map_df(~readr::read_csv(.x,
+                                          col_types = get_col_types("block_cols")
+                                          )
+                         ),
 
          trial_data =
            files %>%
-           map_df(~read_csv(.x,
-                            col_types = get_col_types("trial_cols")
-                            )
-                  ),
+           purrr::map_df(~readr::read_csv(.x,
+                                          col_types = get_col_types("trial_cols")
+                                          )
+                         ),
 
          trial_data_sub00 =
            files %>%
-           map_df(~read_csv(.x,
-                            col_types = get_col_types("trial_cols_sub00")
-                            )
-           )
-  )
-
-
-
-
-
+           purrr::map_df(~readr::read_csv(.x,
+                                          col_types = get_col_types("trial_cols_sub00")
+                                          )
+                         )
+         )
 }
