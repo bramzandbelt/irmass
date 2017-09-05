@@ -8,6 +8,16 @@ show_trial_numbers <- function(df) {
     tidyr::spread(key = subjectIx, value = count)
 }
 
+#' Counts consecutive failures
+#'
+#' This is used to count the number of consecutive blocks in which performance fails to meet a criterion.
+#'
+#' @param df a tidied data frame containing the performance data
+count_consecutive_failures <- function(x) {
+  x[x == 1] = sequence(with(rle(x), lengths[values == 1]));
+  x
+}
+
 #' Test of inhibition function for individual-level data
 #'
 #' Tests the independent race model's qualitative prediction that the probability of responding given a stop-signal increases as a function of stop-signal delay, in individual-level data.
@@ -34,43 +44,39 @@ test_if_grp <- function() {
 #' @param nsrt a vector of no-signal response times
 test_srrt_vs_nsrt_idv <- function(data, srrt, nsrt) {
 
-
-
-
-
-  # Bayes Factor packages cannot handle tibbles, so we convert to data frame and refactorize the trial_alt variable
-  df <-
-    tibb %>%
-    as.data.frame(.)
-  df$trial_alt <- factor(df$trial_alt, levels = levels)
-
-  # Get Bayes Factors and their inverse
-  B10_data <-
-    df %>%
-    split(.$subjectIx) %>%
-    map(~ttestBF(formula = RT_trial_inv ~ trial_alt,
-                 data = .,
-                 rscale = rscale
-    )
-    )
-
-  B01_data <- map(B10_data, ~1/.)
-
-  # Note that Bayes Factors are stored as log BF, so we need to take exponential
-  B01 <- B01_data %>% map_dbl(~.@bayesFactor$bf) %>% exp()
-
-  # Put the relevant stats in a tibble
-  tibble(
-    subjectIx = names(B10_data),
-    model = "B01",
-    B = B01,
-    log10B = log10(B01),
-    B_rank = min_rank(B01),
-    error = B01_data %>% map_dbl(~.@bayesFactor$error),
-    label = cut(B01,
-                breaks = bf_breaks,
-                labels = bf_labels)
-  )
+  # # Bayes Factor packages cannot handle tibbles, so we convert to data frame and refactorize the trial_alt variable
+  # df <-
+  #   tibb %>%
+  #   as.data.frame(.)
+  # df$trial_alt <- factor(df$trial_alt, levels = levels)
+  #
+  # # Get Bayes Factors and their inverse
+  # B10_data <-
+  #   df %>%
+  #   split(.$subjectIx) %>%
+  #   map(~ttestBF(formula = RT_trial_inv ~ trial_alt,
+  #                data = .,
+  #                rscale = rscale
+  #   )
+  #   )
+  #
+  # B01_data <- map(B10_data, ~1/.)
+  #
+  # # Note that Bayes Factors are stored as log BF, so we need to take exponential
+  # B01 <- B01_data %>% map_dbl(~.@bayesFactor$bf) %>% exp()
+  #
+  # # Put the relevant stats in a tibble
+  # tibble(
+  #   subjectIx = names(B10_data),
+  #   model = "B01",
+  #   B = B01,
+  #   log10B = log10(B01),
+  #   B_rank = min_rank(B01),
+  #   error = B01_data %>% map_dbl(~.@bayesFactor$error),
+  #   label = cut(B01,
+  #               breaks = bf_breaks,
+  #               labels = bf_labels)
+  # )
 
 
 
