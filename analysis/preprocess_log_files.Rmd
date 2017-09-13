@@ -149,10 +149,17 @@ prac_block_data_tidied <- irmass::tidy_block_data(prac_block_data, stage = 'prac
 expt_block_data_tidied <- irmass::tidy_block_data(expt_block_data, stage = 'expt')
 ```
 #### Print tidied block data for a quick peek
-```{r Print block data}
+
+Tidy practice block data
+```{r Print practice block data}
 prac_block_data_tidied
+```
+
+Tidy experimental block data
+```{r Print experimental block data}
 expt_block_data_tidied
 ```
+
 
 ### Reorganize and tidy data trial data
 
@@ -161,12 +168,24 @@ prac_trial_data_tidied <- irmass::tidy_trial_data(prac_trial_data)
 expt_trial_data_tidied <- irmass::tidy_trial_data(expt_trial_data)
 ```
 
-Print tibbles for a quick look
-```{r Print trial data}
-print(prac_trial_data_tidied$resp_df)
-print(prac_trial_data_tidied$RT_df)
-print(expt_trial_data_tidied$resp_df)
-print(expt_trial_data_tidied$RT_df)
+Tidy practice trial data - responses
+```{r Print practice trial response data}
+prac_trial_data_tidied$resp_df
+```
+
+Tidy practice trial data - response times
+```{r Print practice trial response time data}
+prac_trial_data_tidied$RT_df
+```
+
+Tidy experimental trial data - responses
+```{r Print experimental trial response data}
+expt_trial_data_tidied$resp_df
+```
+
+Tidy experimental trial data - response times
+```{r Print experimental trial response time data}
+expt_trial_data_tidied$RT_df
 ```
 
 # Descriptive statistics
