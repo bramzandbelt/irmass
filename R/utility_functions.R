@@ -2,8 +2,10 @@
 #'
 #' @param base_dirs A list of directories in which subdirectories should be created, if they don't exist
 #' @param notebook_name Name of subdir
-#'
+#' @return created_any Whether or not any output dir was created
+#' @export
 verify_output_dirs <- function(base_dirs, notebook_name) {
+
   for (base_dir in base_dirs) {
     if (!dir.exists(file.path(base_dir,notebook_name))) {
       dir.create(file.path(base_dir,notebook_name), recursive = TRUE)
@@ -26,6 +28,8 @@ verify_output_dirs <- function(base_dirs, notebook_name) {
 #'
 #' @param stage Study stage: practice or experiment
 #' @param filetype File type: triallog or blocklog
+#' @import magrittr
+#' @export
 select_log_files <- function(stage = "experiment", filetype = "triallog") {
 
   # We to need process experiment triallog files from subj00 differently than the others, because of different key namings (this is not the case for triallog from practice session and the blocklogs)
@@ -75,6 +79,7 @@ select_log_files <- function(stage = "experiment", filetype = "triallog") {
 #'
 #' @param files files: list of files
 #' @param data_type Data type (char): trial_data, block_data, sess_data
+#' @export
 read_log_files <- function(files, data_type) {
 
   switch(tolower(data_type),

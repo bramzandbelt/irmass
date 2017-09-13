@@ -1,5 +1,5 @@
 #' Get default ggplot theme settings to be used in this project
-#'
+#' @export
 theme_irmass <- function() {
 
   title_font_size <- 10
@@ -31,10 +31,178 @@ theme_irmass <- function() {
 
       # strip.background = ggplot2::element_rect(),
       # strip.text = ggplot2::element_text(size = subtitle_font_size),
-      strip.background = ggplot2::element_blank(),
-      strip.text = ggplot2::element_blank()
+      # strip.background = ggplot2::element_blank(),
+      # strip.text = ggplot2::element_blank()
 
     )
+}
+
+#' Plots task performance overview, for assessment of performance criteria
+#'
+#' Plotting can be done for practice and experimental stage.
+#'
+#' @param data tibble containing data
+#' @param stage experiment stage, can be 'prac' or 'expt'
+#' @param simple logical, whether to plot details (performance measures, such as RT) or not (showing number of failures/attempts only)
+#' @param block_type char, which block to plot data of (only applies to stage = 'prac' and simple = TRUE)
+#' @export
+plot_overview <- function(data, stage = 'expt', simple = FALSE, block_type = NULL) {
+
+  if (stage == 'prac') {
+    if (simple == TRUE) {
+      data <-
+        dplyr::filter_(data, paste('block_type == "', block_type,'"',sep = "")) %>%
+        droplevels()
+    }
+  }
+
+  # Main variables (x, y, fill, label) -----------------------------------------
+
+  # x, y, and fill vary between `stage`
+  if (stage == 'prac') {
+    plt <- ggplot2::ggplot(data,
+                           ggplot2::aes(x = attempt,
+                                        y = criterion,
+                                        fill = failed
+                           )
+    )
+  } else if (stage == 'expt') {
+    plt <- ggplot2::ggplot(data,
+                           ggplot2::aes(x = subjectIx,
+                                        y = criterion,
+                                        fill = failed
+                           )
+    )
+  }
+
+  # Label varies between `stage` and `simple``
+  if (stage == 'prac') {
+    plt <- plt + ggplot2::aes(label = sprintf("%0.0f", performance))
+    } else if (stage == 'expt') {
+      if (simple) {
+        plt <- plt + ggplot2::aes(label = n_consec_failures)
+      } else {
+        plt <- plt + ggplot2::aes(label = sprintf("%0.0f", performance))
+      }
+    }
+
+  # Facets ---------------------------------------------------------------------
+
+  if (stage == 'prac') {
+    if (simple) {
+      plt <- plt + ggplot2::facet_wrap("subjectIx", ncol = 9)
+    } else {
+      plt <- plt + ggplot2::facet_grid(block_type ~ subjectIx)
+    }
+  }
+
+  # Geoms  ---------------------------------------------------------------------
+
+  if (stage == 'prac') {
+    if (simple) {
+      plt <- plt + ggplot2::geom_tile(na.rm = TRUE, size = 2) +
+        ggplot2::geom_text(size = 2, color = "white")
+
+    } else {
+      plt <- plt + ggplot2::geom_tile(na.rm = TRUE)
+    }
+
+  } else if (stage == 'expt') {
+
+    plt <- plt + ggplot2::geom_tile() +
+      ggplot2::geom_text(size = 2, color = "white")
+
+  }
+
+  # Scales  --------------------------------------------------------------------
+
+  # fill
+  if (stage == 'prac') {
+    fill_name <- "failure to meet block-level task performance criteria"
+  } else if (stage == 'expt') {
+    if (simple) {
+      fill_name <- "failure to meet overall task performance criteria"
+    } else {
+      fill_name <- "failure to meet performance criteria based on consecutive blocks"
+    }
+  }
+
+  plt <- plt + ggplot2::scale_fill_manual(values = c("#008000","#FF0000"),
+                                          guide = ggplot2::guide_legend(
+                                            title.position = "top",
+                                            title.hjust = 0.5),
+                                          name = fill_name
+                                          )
+
+
+  # coord_equal
+  plt <- plt + switch(stage,
+                      expt = ggplot2::coord_equal())
+
+
+  # x and y
+  if (stage == 'prac') {
+    if (!simple) {
+      plt <- plt + ggplot2::scale_x_discrete(breaks = 1:5)
+    }
+
+  } else if (stage == 'expt') {
+    plt <- plt + ggplot2::scale_x_discrete(breaks = 0:35, position = "top") +
+      ggplot2::scale_y_discrete(limits = rev(c("NS_accuracy", "SL_accuracy", "SR_accuracy",
+                                               "SB_accuracy", "IG_accuracy", "NS_mean_RT")),
+                                labels = c("NS_accuracy" = "no-signal accuracy",
+                                           "SL_accuracy" = "stop-left accuracy",
+                                           "SR_accuracy" = "stop-right accuracy",
+                                           "SB_accuracy" = "stop-both accuracy",
+                                           "IG_accuracy" = "ignore accuracy",
+                                           "NS_mean_RT" = "no-signal mean RT (ms)")
+      )
+
+  }
+
+  # Plot title  ----------------------------------------------------------------
+  if (stage == 'prac') {
+    if (simple) {
+      plt <- plt + ggplot2::ggtitle(sprintf("Assessment of task performance exclusion criteria for %s block of practice session",block_type))
+    } else {
+      plt <- plt + ggplot2::ggtitle("Assessment of task performance exclusion criteria of practice session")
+    }
+  } else if (stage == 'expt') {
+    if (simple) {
+      plt <- plt + ggplot2::ggtitle("Exclusion based on number of consecutive blocks in which performance failed to meet criteria")
+    } else {
+      plt <- plt + ggplot2::ggtitle("Exclusion based on overall task performance")
+    }
+  }
+
+  # Axes labels  ---------------------------------------------------------------
+  if (stage == 'prac') {
+    plt <-
+      plt +
+      ggplot2::xlab("Attempt") +
+      ggplot2::ylab("Criterion measure")
+  } else if (stage == 'expt') {
+    plt <-
+      plt +
+      ggplot2::xlab("Subject ID") +
+      ggplot2::ylab("Criterion measure")
+  }
+
+  # Theme  ---------------------------------------------------------------------
+
+  plt <-
+    plt +
+    irmass::theme_irmass()
+
+  if (stage == 'prac') {
+    if (!simple) {
+      plt <-
+        plt +
+        ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, hjust = 0.5, size = 3))
+    }
+  }
+
+  plt
 }
 
 #' Plot inhibition function for individual-level data

@@ -1,21 +1,12 @@
 #' Show trial numbers for al trial types and all individuals
 #'
 #' @param df a tidied data frame containing the performance data
+#' @export
 show_trial_numbers <- function(df) {
   df %>%
     dplyr::group_by(subjectIx,trial,t_d) %>%
     dplyr::summarise(count = n()) %>%
-    tidyr::spread(key = subjectIx, value = count)
-}
-
-#' Counts consecutive failures
-#'
-#' This is used to count the number of consecutive blocks in which performance fails to meet a criterion.
-#'
-#' @param df a tidied data frame containing the performance data
-count_consecutive_failures <- function(x) {
-  x[x == 1] = sequence(with(rle(x), lengths[values == 1]));
-  x
+    tidyr::spread(., key = subjectIx, value = count)
 }
 
 #' Test of inhibition function for individual-level data
@@ -23,6 +14,7 @@ count_consecutive_failures <- function(x) {
 #' Tests the independent race model's qualitative prediction that the probability of responding given a stop-signal increases as a function of stop-signal delay, in individual-level data.
 #'
 #' @param data a data frame containing the data
+#' @export
 test_if_idv <- function(df) {
 
 }
@@ -100,5 +92,37 @@ test_srrt_vs_ssd_idv <- function() {
 #' Test of stop-respond RT vs. stop-signal delay for group-level data
 #'
 test_srrt_vs_ssd_grp <- function() {
+
+}
+
+# ==============================================================================
+
+#' Counts the number of consecutive task blocks in which performance criteria are not met
+#'
+#' This function
+#' @param data A tibble containing block data
+#' @export
+summarize_performance <- function(data, stage = 'expt') {
+
+  cumsum_reset <- function(x) {x[x == 1] = sequence(with(rle(x), lengths[values == 1]));x}
+
+  if (stage == 'prac') {
+    data <- data %>%
+      dplyr::group_by(subjectIx, block_type, criterion, attempt)
+  } else if (stage == 'expt') {
+    data <- data %>%
+      dplyr::group_by(subjectIx, criterion)
+  }
+
+  data %>%
+    dplyr::mutate(consec_failures = failed) %>%
+    tidyr::replace_na(list(consec_failures = 0)) %>%
+    dplyr::mutate(n_consec_failures = cumsum_reset(as.integer(consec_failures))
+                  ) %>%
+    dplyr::summarize(mean_performance = mean(performance),
+                     max_n_consec_failures = max(n_consec_failures),
+                     failed_crit = max_n_consec_failures >=5) %>%
+    dplyr::ungroup() %>%
+    dplyr::arrange(subjectIx, criterion, blockId, attempt)
 
 }

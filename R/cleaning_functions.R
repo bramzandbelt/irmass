@@ -5,80 +5,143 @@
 #' Tidy block data
 #'
 #' Tidying involves multiple steps, including aggregating no-signal performance trial performance across go-signal levels, renaming variables, and assessing performance criteria on the basis of aggregate measures.
-tidy_block_data <- function(df) {
+#' @export
+tidy_block_data <- function(df, stage = 'expt') {
 
+    if (stage == 'prac') {
+      clean_df <-
+        df %>%
+        dplyr::mutate(block_type = ifelse(stringr::str_detect(blockId, '^e.*'),
+                                          "mixed",
+                                          ifelse(.$blockIx == 0,
+                                                 "NS",
+                                                 ifelse(((.$blockIx == 1) & (.$taskVersionId == "A")) |
+                                                          ((.$blockIx == 2) & (.$taskVersionId == "B")),
+                                                        "AS",
+                                                        ifelse(((.$blockIx == 2) & (.$taskVersionId == "A")) |
+                                                                 ((.$blockIx == 1) & (.$taskVersionId == "B")),
+                                                               "SS",
+                                                               ifelse(.$blockIx == 3,
+                                                                      "mixed",
+                                                                      NA_character_
+                                                                      )
+                                                               )
+                                                        )
+                                                 )
+                                          )
+                      ) %>%
+        dplyr::mutate(NS_accuracy = pmin(s1Acc_00,s1Acc_01),
+                      NS_mean_RT = pmax(s1MeanRt_00,s1MeanRt_01),
+                      NS_mean_RTdiff = pmax(s1MeanRtDiff_00,s1MeanRtDiff_01)
+                      ) %>%
+        dplyr::rename(SL_accuracy = s2Acc_00,
+                      SR_accuracy = s2Acc_01,
+                      SB_accuracy = s2Acc_02,
+                      IG_accuracy = s2Acc_03
+                      ) %>%
+        dplyr::mutate(NS_accuracy_failed = NS_accuracy < 85,
+                      NS_mean_RT_failed = NS_mean_RT > 650,
+                      NS_mean_RTdiff_failed = NS_mean_RTdiff > 50,
+                      SL_accuracy_failed = SL_accuracy < 20,
+                      SR_accuracy_failed = SR_accuracy < 20,
+                      SB_accuracy_failed = SB_accuracy < 20,
+                      IG_accuracy_failed = IG_accuracy < 80
+                      ) %>%
+        dplyr::select(subjectIx, blockId, block_type,
+                      NS_accuracy, NS_mean_RT, NS_mean_RTdiff,
+                      SL_accuracy, SR_accuracy, SB_accuracy, IG_accuracy,
+                      NS_accuracy_failed, NS_mean_RT_failed, NS_mean_RTdiff_failed,
+                      SL_accuracy_failed, SR_accuracy_failed, SB_accuracy_failed, IG_accuracy_failed
+                      ) %>%
+        dplyr::group_by(subjectIx,blockId) %>%
+        dplyr::mutate(attempt = 1:n()) %>%
+        dplyr::ungroup()
 
-  clean_df <-
-    df %>%
-    dplyr::mutate(block_type = ifelse(stringr::str_detect(blockId, '^e.*'),
-                                      "mixed",
-                                      ifelse(.$blockIx == 0,
-                                             "NS",
-                                             ifelse(((.$blockIx == 1) & (.$taskVersionId == "A")) |
-                                                      ((.$blockIx == 2) & (.$taskVersionId == "B")),
-                                                    "AS",
-                                                    ifelse(((.$blockIx == 2) & (.$taskVersionId == "A")) |
-                                                             ((.$blockIx == 1) & (.$taskVersionId == "B")),
-                                                           "SS",
-                                                           ifelse(.$blockIx == 3,
-                                                                  "mixed",
-                                                                  NA_character_
-                                                                  )
-                                                           )
-                                                    )
-                                             )
-                                      )
-    ) %>%
-    dplyr::mutate(NS_accuracy = pmin(s1Acc_00,s1Acc_01),
-                  NS_mean_RT = pmax(s1MeanRt_00,s1MeanRt_01),
-                  NS_mean_RTdiff = pmax(s1MeanRtDiff_00,s1MeanRtDiff_01)
-    ) %>%
-    dplyr::rename(SL_accuracy = s2Acc_00,
-                  SR_accuracy = s2Acc_01,
-                  SB_accuracy = s2Acc_02,
-                  IG_accuracy = s2Acc_03
-    ) %>%
-    dplyr::mutate(NS_accuracy_failed = NS_accuracy < 85,
-                  NS_mean_RT_failed = NS_mean_RT > 650,
-                  NS_mean_RTdiff_failed = NS_mean_RTdiff > 50,
-                  SL_accuracy_failed = SL_accuracy < 20,
-                  SR_accuracy_failed = SR_accuracy < 20,
-                  SB_accuracy_failed = SB_accuracy < 20,
-                  IG_accuracy_failed = IG_accuracy < 80
-    ) %>%
-    dplyr::select(subjectIx, blockId, block_type,
-                  NS_accuracy, NS_mean_RT, NS_mean_RTdiff,
-                  SL_accuracy, SR_accuracy, SB_accuracy, IG_accuracy,
-                  NS_accuracy_failed, NS_mean_RT_failed, NS_mean_RTdiff_failed,
-                  SL_accuracy_failed, SR_accuracy_failed, SB_accuracy_failed, IG_accuracy_failed
-    ) %>%
-    dplyr::group_by(subjectIx,blockId) %>%
-    dplyr::mutate(attempt = 1:n()) %>%
-    dplyr::ungroup()
+    } else if (stage == 'expt') {
 
-  general_cols <-  c("subjectIx","blockId","block_type","attempt")
-  performance_cols <- c("NS_accuracy","NS_mean_RT","NS_mean_RTdiff","SL_accuracy","SR_accuracy","SB_accuracy","IG_accuracy")
-  failure_cols <- colnames(clean_df) %>% .[stringr::str_detect(., ".*failed$")]
+      clean_df <-
+        df %>%
+        dplyr::group_by(subjectIx) %>%
+        dplyr::summarize(NS_accuracy = mean(c(s1Acc_00,s1Acc_01)),
+                         NS_accuracy_failed = NS_accuracy < 85,
+                         NS_mean_RT = mean(c(s1MeanRt_00,s1MeanRt_01)),
+                         NS_mean_RT_failed = NS_mean_RT > 650,
+                         NS_mean_RTdiff = mean(c(s1MeanRtDiff_00,s1MeanRtDiff_01)),
+                         NS_mean_RTdiff_failed = NS_mean_RTdiff > 50,
+                         SL_accuracy = mean(s2Acc_00),
+                         SL_accuracy_failed = SL_accuracy < 20,
+                         SR_accuracy = mean(s2Acc_01),
+                         SR_accuracy_failed = SR_accuracy < 20,
+                         SB_accuracy = mean(s2Acc_02),
+                         SB_accuracy_failed = SB_accuracy < 20,
+                         IG_accuracy = mean(s2Acc_03),
+                         IG_accuracy_failed = IG_accuracy < 80)
 
-  tidy_performance_stats <-
-    clean_df %>%
-    tidyr::gather_(gather_cols = performance_cols,
-                   key_col = "criterion",
-                   value_col = "performance") %>%
-    dplyr::select_(.dots = c(general_cols,"criterion","performance"))
+    }
 
-  tidy_failure_stats <-
-    clean_df %>%
-    dplyr::select_(.dots = c(general_cols,failure_cols)) %>%
-    setNames(gsub("_failed","",names(.))) %>%
-    tidyr::gather_(gather_cols = performance_cols,
-                   key_col = "criterion",
-                   value_col = "failed") %>%
-    dplyr::select_(.dots = c(general_cols,"criterion","failed"))
+  # Make tidy ------------------------------------------------------------------
 
-  dplyr::left_join(tidy_performance_stats,tidy_failure_stats,
-                   by = c(general_cols,"criterion")) %>%
-    dplyr::arrange(subjectIx, blockId, attempt, criterion)
+  if (stage == 'prac') {
+
+    general_cols <-  c("subjectIx","blockId","block_type","attempt")
+    performance_cols <- c("NS_accuracy","NS_mean_RT","NS_mean_RTdiff","SL_accuracy","SR_accuracy","SB_accuracy","IG_accuracy")
+    failure_cols <- colnames(clean_df) %>% .[stringr::str_detect(., ".*failed$")]
+
+    # Performance stats
+
+    tidy_performance_stats <-
+      clean_df %>%
+      tidyr::gather_(gather_cols = performance_cols,
+                     key_col = "criterion",
+                     value_col = "performance") %>%
+      dplyr::select_(.dots = c(general_cols,"criterion","performance"))
+
+    # Failure stats
+    tidy_failure_stats <-
+      clean_df %>%
+      dplyr::select_(.dots = c(general_cols,failure_cols)) %>%
+      setNames(gsub("_failed","",names(.))) %>%
+      tidyr::gather_(gather_cols = performance_cols,
+                     key_col = "criterion",
+                     value_col = "failed") %>%
+      dplyr::select_(.dots = c(general_cols,"criterion","failed"))
+
+    # Combine performance and failure stats in one data frame
+    tidy_data <-
+      dplyr::left_join(tidy_performance_stats,tidy_failure_stats,
+                       by = c(general_cols,"criterion")) %>%
+      dplyr::arrange(subjectIx, blockId, attempt, criterion)
+
+  } else if (stage == 'expt') {
+
+    general_cols <-  "subjectIx"
+    performance_cols <- c("NS_accuracy","SL_accuracy","SR_accuracy","SB_accuracy","IG_accuracy","NS_mean_RT", "NS_mean_RTdiff")
+    failure_cols <- colnames(clean_df) %>% .[stringr::str_detect(., ".*failed$")]
+
+    # Performance stats
+    tidy_performance_stats <-
+      clean_df %>%
+      tidyr::gather_(gather_cols = performance_cols,
+                     key_col = "criterion",
+                     value_col = "performance") %>%
+      dplyr::select_(.dots = c(general_cols,"criterion","performance"))
+
+    # Failure stats
+    tidy_failure_stats <-
+      clean_df %>%
+      dplyr::select_(.dots = c(general_cols,failure_cols)) %>%
+      setNames(gsub("_failed","",names(.))) %>%
+      tidyr::gather_(gather_cols = performance_cols,
+                     key_col = "criterion",
+                     value_col = "failed") %>%
+      dplyr::select_(.dots = c(general_cols,"criterion","failed"))
+
+    # Combine performance and failure stats in one data frame
+    tidy_data <-
+      dplyr::left_join(tidy_performance_stats,tidy_failure_stats,
+                       by = c(general_cols,"criterion")) %>%
+      dplyr::arrange(subjectIx, criterion)
+  }
 }
 
 # ==============================================================================
@@ -87,6 +150,7 @@ tidy_block_data <- function(df) {
 #'
 #' Tidying involves the following steps
 #' - renaming and computing variables in line with preregistration
+#' @export
 tidy_trial_data <- function(df) {
 
   # Manipulated variables (see §2.5.1. of the preregistration) =================
@@ -236,6 +300,7 @@ tidy_trial_data <- function(df) {
 
 #' Get column types for extracting data from csv files
 #'
+# '@export
 get_col_types <- function(file_type){
 
   # blocklog_raw
@@ -361,7 +426,7 @@ get_col_types <- function(file_type){
                             `rtDiff1_f-h` = readr::col_double(),
                             `rtDiff1_v-b` = readr::col_double(),
                             rtDiff1_mean = readr::col_double(),
-                            trialCorrect = readr::col_character(),
+                            trialCorrect = readr::col_logical(),
                             trialType = readr::col_character(),
                             responseType = readr::col_character(),
                             trialFeedback = readr::col_character()
@@ -385,6 +450,7 @@ split_log_in_multi_table <- function(df) {
 #' Verifies index columns
 #'
 #' Identifies index columns, replaces NaNs with NAs, and converts objects to integer
+#' @export
 verify_ix_cols <- function(df) {
   col_vector <- stringr::str_subset(colnames(df),".*Ix$")
   df[col_vector] <- df[col_vector] %>%
