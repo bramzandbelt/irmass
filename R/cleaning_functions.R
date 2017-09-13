@@ -140,7 +140,7 @@ tidy_block_data <- function(df, stage = 'expt') {
     tidy_data <-
       dplyr::left_join(tidy_performance_stats,tidy_failure_stats,
                        by = c(general_cols,"criterion")) %>%
-      dplyr::arrange(subjectIx, blockId, criterion)
+      dplyr::arrange(subjectIx, criterion, blockId)
   }
 }
 
