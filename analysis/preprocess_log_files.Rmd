@@ -6,7 +6,6 @@ output:
     toc: yes
     number_sections: yes
     depth: 4
-    fig_caption: yes
     df_print: paged
     theme: readable
     highlight: pygments
@@ -172,12 +171,14 @@ print(expt_trial_data_tidied$RT_df)
 
 # Descriptive statistics
 
-```{r Trial numbers in practice session, rows.print=36, caption = "Trial numbers in practice session"}
-print(irmass::show_trial_numbers(prac_trial_data_tidied$RT_df))
+Trial numbers in practice session
+```{r Trial numbers in practice session, rows.print=36}
+irmass::show_trial_numbers(prac_trial_data_tidied$RT_df)
 ```
 
-```{r Trial numbers in experimental session, rows.print=36, caption = "Trial numbers in experimental session"}
-print(irmass::show_trial_numbers(expt_trial_data_tidied$RT_df))
+Trial numbers in experimental session
+```{r Trial numbers in experimental session, rows.print=36}
+irmass::show_trial_numbers(expt_trial_data_tidied$RT_df)
 ```
 
 # Inferential statistics
