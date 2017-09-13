@@ -1,5 +1,5 @@
 ---
-title: "Preprocess files"
+title: "Preprocess log files"
 author: "Bram B. Zandbelt"
 output:
   html_document:
