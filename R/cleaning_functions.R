@@ -61,7 +61,7 @@ tidy_block_data <- function(df, stage = 'expt') {
 
       clean_df <-
         df %>%
-        dplyr::group_by(subjectIx) %>%
+        dplyr::group_by(subjectIx, blockId) %>%
         dplyr::summarize(NS_accuracy = mean(c(s1Acc_00,s1Acc_01)),
                          NS_accuracy_failed = NS_accuracy < 85,
                          NS_mean_RT = mean(c(s1MeanRt_00,s1MeanRt_01)),
@@ -114,7 +114,7 @@ tidy_block_data <- function(df, stage = 'expt') {
 
   } else if (stage == 'expt') {
 
-    general_cols <-  "subjectIx"
+    general_cols <-  c("subjectIx","blockId")
     performance_cols <- c("NS_accuracy","SL_accuracy","SR_accuracy","SB_accuracy","IG_accuracy","NS_mean_RT", "NS_mean_RTdiff")
     failure_cols <- colnames(clean_df) %>% .[stringr::str_detect(., ".*failed$")]
 
@@ -140,7 +140,7 @@ tidy_block_data <- function(df, stage = 'expt') {
     tidy_data <-
       dplyr::left_join(tidy_performance_stats,tidy_failure_stats,
                        by = c(general_cols,"criterion")) %>%
-      dplyr::arrange(subjectIx, criterion)
+      dplyr::arrange(subjectIx, blockId, criterion)
   }
 }
 
