@@ -16,7 +16,7 @@ output:
 
 # Preliminaries
 Make `magrittr`'s pipe accessible from notebook.
-```{r Provide access to magrittr's pipe}
+```{r Provide access to pipe from magrittr }
 "%>%" <- magrittr::`%>%`
 ```
 
