@@ -25,6 +25,21 @@ get_bf_settings <- function(param) {
 
 }
 
+#' Join tibbles containing descriptive and inferential statistics data
+#'
+#' Joining occurs via a left-join operation by the subjectIx variable
+#' @param descriptives tibble containing descriptives statistics
+#' @param inferentials tibble containing inferential statistics
+join_stats_tibbles <- function(descriptives, inferentials) {
+
+  # Assertions
+  assertthat::assert_that(assertthat::descriptives(descriptives, 'subjectIx'))
+  assertthat::assert_that(assertthat::descriptives(inferentials, 'subjectIx'))
+
+  descriptives %>%
+    dplyr::left_join(inferentials, by = "subjectIx")
+}
+
 
 #' Savage-Dicky density ratio test
 #'
@@ -143,46 +158,53 @@ test_if_grp <- function() {
 #'
 #' Tests the independent race model's qualitative prediction that stop-respond RT should be shorter than no-signal, in individual-level data.
 #'
-#' @param ssrt a vector of stop-respond response times
-#' @param nsrt a vector of no-signal response times
-test_srrt_vs_nsrt_idv <- function(data, srrt, nsrt) {
+#' @param tibb tibble with trial-level data
+#' @param trial_alt_levels 2-element character vector containing the levels to contrast
+test_srrt_vs_nsrt_idv <- function(tibb, trial_alt_levels) {
 
-  # # Bayes Factor packages cannot handle tibbles, so we convert to data frame and refactorize the trial_alt variable
-  # df <-
-  #   tibb %>%
-  #   as.data.frame(.)
-  # df$trial_alt <- factor(df$trial_alt, levels = levels)
-  #
-  # # Get Bayes Factors and their inverse
-  # B10_data <-
-  #   df %>%
-  #   split(.$subjectIx) %>%
-  #   map(~ttestBF(formula = RT_trial_inv ~ trial_alt,
-  #                data = .,
-  #                rscale = rscale
-  #   )
-  #   )
-  #
-  # B01_data <- map(B10_data, ~1/.)
-  #
-  # # Note that Bayes Factors are stored as log BF, so we need to take exponential
-  # B01 <- B01_data %>% map_dbl(~.@bayesFactor$bf) %>% exp()
-  #
-  # # Put the relevant stats in a tibble
-  # tibble(
-  #   subjectIx = names(B10_data),
-  #   model = "B01",
-  #   B = B01,
-  #   log10B = log10(B01),
-  #   B_rank = min_rank(B01),
-  #   error = B01_data %>% map_dbl(~.@bayesFactor$error),
-  #   label = cut(B01,
-  #               breaks = bf_breaks,
-  #               labels = bf_labels)
-  # )
+  # Assertions
+  assertthat::assert_that(assertthat::has_name(tibb, 'trial_alt'))
+  assertthat::assert_that(assertthat::has_name(tibb, 'RT_trial'))
+  assertthat::assert_that(assertthat::has_name(tibb, 'RT_trial_inv'))
 
+  # Bayes Factor packages cannot handle tibbles, so:
+  # - convert to data frame
+  # - refactorize independent variables
+  df <-
+    tibb %>%
+    dplyr::filter(trial_alt %in% trial_alt_levels) %>%
+    as.data.frame(.)
+  df$trial_alt <- factor(df$trial_alt, levels = trial_alt_levels)
 
+  # Get Bayes Factors and their inverse
+  B10_data <-
+    df %>%
+    split(.$subjectIx) %>%
+    # Perform an independent Bayesian t-test (trials assumed independent)
+    purrr::map(~BayesFactor::ttestBF(formula = RT_trial_inv ~ trial_alt,
+                                     data = .,
+                                     rscale = get_bf_settings('rscale')
+                                     )
+               )
 
+    # Take the inverse
+    B01_data <- purrr::map(B10_data, ~1/.)
+
+    # Note that Bayes Factors are stored as log BF, so we need to take exponential
+    B01 <- B01_data %>% purrr::map_dbl(~.@bayesFactor$bf) %>% exp()
+
+    # Put the relevant stats in a tibble
+    tibble::tibble(
+      subjectIx = names(B10_data),
+      model = "B01",
+      B = B01,
+      log10B = log10(B01),
+      B_rank = dplyr::min_rank(B01),
+      error = B01_data %>% purrr::map_dbl(~.@bayesFactor$error),
+      label = cut(B01,
+                  breaks = get_bf_settings('breaks'),
+                  labels = get_bf_settings('labels'))
+    )
 }
 
 #' Test of stop-respond RT vs. no-signal RT for group-level data
