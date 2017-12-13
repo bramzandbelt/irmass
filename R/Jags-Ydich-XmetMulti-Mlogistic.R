@@ -1,18 +1,18 @@
-# Jags-Ydich-XmetMulti-Mlogistic.R 
+# Jags-Ydich-XmetMulti-Mlogistic.R
 # Accompanies the book:
-#   Kruschke, J. K. (2015). Doing Bayesian Data Analysis, Second Edition: 
+#   Kruschke, J. K. (2015). Doing Bayesian Data Analysis, Second Edition:
 #   A Tutorial with R, JAGS, and Stan. Academic Press / Elsevier.
 
-# source("DBDA2E-utilities.R")
-
+# require(runjags)
 
 #===============================================================================
 
-genMCMC = function( data , xName="x" , yName="y" , 
+genMCMC = function( data , xName="x" , yName="y" ,
                     numSavedSteps=10000 , thinSteps=1 , saveName=NULL ,
-                    runjagsMethod=runjagsMethodDefault , 
-                    nChains=nChainsDefault ) { 
+                    runjagsMethod=runjagsMethodDefault ,
+                    nChains=nChainsDefault ) {
   require(runjags)
+  require(coda)
   #-----------------------------------------------------------------------------
   # THE DATA.
   y = data[,yName]
@@ -32,55 +32,32 @@ genMCMC = function( data , xName="x" , yName="y" ,
     Ntotal = dim(x)[1]
   )
   #-----------------------------------------------------------------------------
-  
-  # model_string_stop <- '
-  # model {
-  #     # prior on effect size (cf. Rouder & Morey, 2012)
-  #     delta ~ dnorm(0, lambdadelta)
-  #     lambdadelta ~ dchisqr(1)
-  #     sigma ~ dunif(0, 10)
-  #     b0 ~ dnorm(0, 0.001)
-  #     b1 <- delta * sigma
-  #     for (i in 1:N) {
-  #         y[i] ~ dbern(p[i])
-  #         logit(p[i]) <- b0 + b1 * x1[i]
-  #     }
-  # }'
-  
-  
-  
   # THE MODEL.
   modelString = "
   # Standardize the data:
   data {
-    for ( j in 1:Nx ) {
-      xm[j]  <- mean(x[,j])
-      xsd[j] <-   sd(x[,j])
-      for ( i in 1:Ntotal ) {
-        zx[i,j] <- ( x[i,j] - xm[j] ) / xsd[j]
-      }
-    }
+  for ( j in 1:Nx ) {
+  xm[j]  <- mean(x[,j])
+  xsd[j] <-   sd(x[,j])
+  for ( i in 1:Ntotal ) {
+  zx[i,j] <- ( x[i,j] - xm[j] ) / xsd[j]
+  }
+  }
   }
   # Specify the model for standardized data:
   model {
-    for ( i in 1:Ntotal ) {
-      # In JAGS, ilogit is logistic:
-      y[i] ~ dbern( ilogit( zbeta0 + sum( zbeta[1:Nx] * zx[i,1:Nx] ) ) )
-    }
-    delta ~ dnorm(0, lambdadelta)
-    lambdadelta ~ dchisqr(1)
-    sigma ~ dunif(0, 10)
-    # Priors vague on standardized scale:
-    #zbeta0 ~ dnorm( 0 , 1/2^2 )  
-    zbeta0 ~ dnorm( 0 , 0.001 )  
-
-    for ( j in 1:Nx ) {
-      # zbeta[j] ~ dnorm( 0 , 1/2^2 )
-      zbeta[j]  <- delta * sigma
-    }
-    # Transform to original scale:
-    beta[1:Nx] <- zbeta[1:Nx] / xsd[1:Nx] 
-    beta0 <- zbeta0 - sum( zbeta[1:Nx] * xm[1:Nx] / xsd[1:Nx] )
+  for ( i in 1:Ntotal ) {
+  # In JAGS, ilogit is logistic:
+  y[i] ~ dbern( ilogit( zbeta0 + sum( zbeta[1:Nx] * zx[i,1:Nx] ) ) )
+  }
+  # Priors vague on standardized scale:
+  zbeta0 ~ dnorm( 0 , 1/2^2 )
+  for ( j in 1:Nx ) {
+  zbeta[j] ~ dnorm( 0 , 1/2^2 )
+  }
+  # Transform to original scale:
+  beta[1:Nx] <- zbeta[1:Nx] / xsd[1:Nx]
+  beta0 <- zbeta0 - sum( zbeta[1:Nx] * xm[1:Nx] / xsd[1:Nx] )
   }
   " # close quote for modelString
   # Write out modelString to a text file
@@ -89,27 +66,27 @@ genMCMC = function( data , xName="x" , yName="y" ,
   #-----------------------------------------------------------------------------
   # INTIALIZE THE CHAINS.
   # Let JAGS do it...
-  
+
   #-----------------------------------------------------------------------------
   # RUN THE CHAINS
-  parameters = c( "beta0" ,  "beta" ,  
+  parameters = c( "beta0" ,  "beta" ,
                   "zbeta0" , "zbeta" )
   adaptSteps = 500  # Number of steps to "tune" the samplers
   burnInSteps = 1000
   runJagsOut <- run.jags( method=runjagsMethod ,
-                          model="TEMPmodel.txt" , 
-                          monitor=parameters , 
-                          data=dataList ,  
-                          #inits=initsList , 
+                          model="TEMPmodel.txt" ,
+                          monitor=parameters ,
+                          data=dataList ,
+                          #inits=initsList ,
                           n.chains=nChains ,
                           adapt=adaptSteps ,
-                          burnin=burnInSteps , 
+                          burnin=burnInSteps ,
                           sample=ceiling(numSavedSteps/nChains) ,
                           thin=thinSteps ,
                           summarise=FALSE ,
                           plots=FALSE )
   codaSamples = as.mcmc.list( runJagsOut )
-  # resulting codaSamples object has these indices: 
+  # resulting codaSamples object has these indices:
   #   codaSamples[[ chainIdx ]][ stepIdx , paramIdx ]
   if ( !is.null(saveName) ) {
     save( codaSamples , file=paste(saveName,"Mcmc.Rdata",sep="") )
@@ -119,7 +96,7 @@ genMCMC = function( data , xName="x" , yName="y" ,
 
 #===============================================================================
 
-smryMCMC = function(  codaSamples , 
+smryMCMC = function(  codaSamples ,
                       saveName=NULL ) {
   summaryInfo = NULL
   mcmcMat = as.matrix(codaSamples)
@@ -170,8 +147,8 @@ plotMCMC = function( codaSamples , data , xName="x" , yName="y" ,
       text(0.5, 0.5, txt, cex=1.5 ) # was cex=cex.cor*r
     }
     pairs( cbind( beta0 , beta )[plotIdx,] ,
-           labels=c( "beta[0]" , 
-                     paste0("beta[",1:ncol(beta),"]\n",xName) ) , 
+           labels=c( "beta[0]" ,
+                     paste0("beta[",1:ncol(beta),"]\n",xName) ) ,
            lower.panel=panel.cor , col="skyblue" )
     if ( !is.null(saveName) ) {
       saveGraph( file=paste(saveName,"PostPairs",sep=""), type=saveType)
@@ -183,7 +160,7 @@ plotMCMC = function( codaSamples , data , xName="x" , yName="y" ,
   if ( ncol(x)==1 ) {
     openGraph(width=7,height=6)
     par( mar=c(3.5,3.5,2,1) , mgp=c(2.0,0.7,0) )
-    
+
     plot( x[,1] , y , xlab=xName[1] , ylab=yName ,
           cex=2.0 , cex.lab=1.5 , col="black" , main="Data with Post. Pred." )
     abline(h=0.5,lty="dotted")
@@ -196,9 +173,14 @@ plotMCMC = function( codaSamples , data , xName="x" , yName="y" ,
       xInt = -beta0[cIdx]/beta[cIdx,1]
       arrows( xInt,0.5, xInt,-0.04, length=0.1 , col="skyblue" , lty="dashed" )
     }
-    
-    tib <- data_frame(t_d = as.vector(x),r_bi = y) %>% group_by(t_d) %>% summarize(p_resp = mean(r_bi))
-    points(as.double(tib$t_d), as.double(tib$p_resp), cex=2.0 , cex.lab=1.5, col="red")
+
+    # Plot probability of responding given a stop-signal (p_resp)
+    # tib <-
+    #   tibble::data_frame(t_d = as.vector(x),r_bi = y) %>%
+    #   dplyr::group_by(t_d) %>%
+    #   dplyr::summarize(p_resp = mean(r_bi))
+    # points(as.double(tib$t_d), as.double(tib$p_resp), cex=2.0 , cex.lab=1.5, col="red")
+
     if ( !is.null(saveName) ) {
       saveGraph( file=paste(saveName,"DataThresh",sep=""), type=saveType)
     }
@@ -219,13 +201,13 @@ plotMCMC = function( codaSamples , data , xName="x" , yName="y" ,
   }
   #-----------------------------------------------------------------------------
   # Marginal histograms:
-  
-  decideOpenGraph = function( panelCount , saveName , finished=FALSE , 
+
+  decideOpenGraph = function( panelCount , saveName , finished=FALSE ,
                               nRow=1 , nCol=3 ) {
     # If finishing a set:
     if ( finished==TRUE ) {
       if ( !is.null(saveName) ) {
-        saveGraph( file=paste0(saveName,ceiling((panelCount-1)/(nRow*nCol))), 
+        saveGraph( file=paste0(saveName,ceiling((panelCount-1)/(nRow*nCol))),
                    type=saveType)
       }
       panelCount = 1 # re-set panelCount
@@ -235,7 +217,7 @@ plotMCMC = function( codaSamples , data , xName="x" , yName="y" ,
     if ( ( panelCount %% (nRow*nCol) ) == 1 ) {
       # If previous graph was open, save previous one:
       if ( panelCount>1 & !is.null(saveName) ) {
-        saveGraph( file=paste0(saveName,(panelCount%/%(nRow*nCol))), 
+        saveGraph( file=paste0(saveName,(panelCount%/%(nRow*nCol))),
                    type=saveType)
       }
       # Open new graph
@@ -248,7 +230,7 @@ plotMCMC = function( codaSamples , data , xName="x" , yName="y" ,
     return(panelCount)
     }
   }
-  
+
   # Original scale:
   panelCount = 1
   panelCount = decideOpenGraph( panelCount , saveName=paste0(saveName,"PostMarg") )
@@ -260,7 +242,7 @@ plotMCMC = function( codaSamples , data , xName="x" , yName="y" ,
                          xlab=bquote(beta[.(bIdx)]) , main=xName[bIdx] )
   }
   panelCount = decideOpenGraph( panelCount , finished=TRUE , saveName=paste0(saveName,"PostMarg") )
-  
+
   # Standardized scale:
   panelCount = 1
   panelCount = decideOpenGraph( panelCount , saveName=paste0(saveName,"PostMargZ") )
@@ -272,7 +254,7 @@ plotMCMC = function( codaSamples , data , xName="x" , yName="y" ,
                          xlab=bquote(z*beta[.(bIdx)]) , main=xName[bIdx] )
   }
   panelCount = decideOpenGraph( panelCount , finished=TRUE , saveName=paste0(saveName,"PostMargZ") )
-  
+
   #-----------------------------------------------------------------------------
 }
 #===============================================================================

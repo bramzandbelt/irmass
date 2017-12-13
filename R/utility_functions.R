@@ -1,3 +1,61 @@
+#' Whether or not to upload data to figShare
+#'
+#' When this function returns TRUE, then data and figures are uploaded to figShare, DOIs are created, data is made public.
+#' @export
+upload_data_to_figshare <- function(){
+  TRUE
+}
+
+#' Return project-specific variable values for uploading to figShare
+#'
+#' @param spec variable
+#' @param article_id figShare ID number of the article (optional)
+#' @export
+get_figshare_specs <- function(spec, article_id) {
+
+  # If only a spec argument is provided (e.g. article_id not yet created)
+  if (missing(article_id)) {
+
+    switch(spec,
+           authors = list("0000-0002-6491-1247"),
+           categories = c(7,   # Behavioral Neuroscience
+                          143, # Neuroscience and Physiological Psychology
+                          283, # Motor control
+                          368, # Biological Psychology
+                          377, # Psychological Methodology, Design and Analysis
+                          379, # Sensory Processes, Perception and Performance
+                          382, # Psychology not elsewhere classified
+                          388, # Cognitive Science not elsewhere classified
+                          389  # Psychology and Cognitive Sciences not elsewhere classified
+           ),
+           do_upload = TRUE, # Whether or not to upload data to figshare
+           links = list('https://osf.io/mq64z/' # Pre-registration document
+                        ),
+           tags = c('executive function',
+                    'cognitive contol',
+                    'motor control',
+                    'response inhibition',
+                    'inhibition',
+                    'stopping',
+                    'selective control',
+                    'selective stopping',
+                    'action-selective stopping',
+                    'stimulus-selective stopping',
+                    'stop-signal task',
+                    'stop task',
+                    'response time',
+                    'response latency'
+                    ),
+           visibility = 'draft'
+    )
+    } else {
+      switch(spec,
+             doi = paste0('https://doi.org/10.6084/m9.figshare.',as.character(article_id))
+      )
+    }
+}
+
+
 #' Checks if directories for notebook output exists, and if not creates them
 #'
 #' @param base_dirs A list of directories in which subdirectories should be created, if they don't exist
@@ -86,7 +144,7 @@ read_log_files <- function(files, data_type) {
          sess_data =
            files %>%
            purrr::map_df(~readr::read_csv(.x,
-                                          col_types = get_col_types("sess_cols")
+                                          col_types = get_col_types("log_sess_cols")
                                           )
                          ) %>%
            dplyr::distinct(subjectIx, .keep_all = TRUE),
@@ -94,21 +152,21 @@ read_log_files <- function(files, data_type) {
          block_data =
            files %>%
            purrr::map_df(~readr::read_csv(.x,
-                                          col_types = get_col_types("block_cols")
+                                          col_types = get_col_types("log_block_cols")
                                           )
                          ),
 
          trial_data =
            files %>%
            purrr::map_df(~readr::read_csv(.x,
-                                          col_types = get_col_types("trial_cols")
+                                          col_types = get_col_types("log_trial_cols")
                                           )
                          ),
 
          trial_data_sub00 =
            files %>%
            purrr::map_df(~readr::read_csv(.x,
-                                          col_types = get_col_types("trial_cols_sub00")
+                                          col_types = get_col_types("log_trial_cols_sub00")
                                           )
                          )
          )

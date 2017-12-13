@@ -1,9 +1,36 @@
+#' Derive Bayesian logistic regression predictionsgiven best-fitting parameters
+#'
+#' @param tibb Tibble containing columns subject identifier (subjectIx), best-fitting parameters (mean_beta0, mean_beta), and Bayes factor (B)
+#' @export
+derive_bayesian_logistic_regression_preds <- function(tibb) {
+
+  prd_data <-
+    tibble::tibble(subjectIx = tibb$subjectIx,
+                   # subjectIx = as.character(tibb$subjectIx),
+                   beta0 = tibb$mean_beta0,
+                   beta = tibb$mean_beta,
+                   B = tibb$B
+    ) %>%
+    # dplyr::left_join(expand.grid(subjectIx = as.character(tibb$subjectIx),
+    dplyr::left_join(expand.grid(subjectIx = tibb$subjectIx,
+                                 # From 0 to 750 ms seems a good range for stop-signal delays of 66, 166, 266, 366, and 466 ms
+                                 x = seq(from = 0,
+                                         to = 0.75,
+                                         by = 0.01)
+    ),
+    by = 'subjectIx') %>%
+    dplyr::mutate(y = logistic(beta0 + beta * x))
+
+  prd_data
+
+}
+
 #' Get parameters for Bayesian hypothesis testing
 #'
 #' These include the width of the priod (rscale), Bayes factor category labels (labels) and cutoffs (breaks).
 #'
 #' @param param parameter to get settings of
-
+#' @export
 get_bf_settings <- function(param) {
 
   switch(param,
@@ -19,7 +46,7 @@ get_bf_settings <- function(param) {
                     'strong evidence for H0',
                     'very strong evidence for H0',
                     'extreme evidence for H0'),
-         n_iter = 50000 # Number of iterations for sampling from posterior distribution
+         n_iter = 100000 # Number of iterations for sampling from posterior distribution
          )
 
 
@@ -30,21 +57,30 @@ get_bf_settings <- function(param) {
 #' Joining occurs via a left-join operation by the subjectIx variable
 #' @param descriptives tibble containing descriptives statistics
 #' @param inferentials tibble containing inferential statistics
+#' @export
 join_stats_tibbles <- function(descriptives, inferentials) {
 
   # Assertions
-  assertthat::assert_that(assertthat::descriptives(descriptives, 'subjectIx'))
-  assertthat::assert_that(assertthat::descriptives(inferentials, 'subjectIx'))
+  # assertthat::assert_that(assertthat::descriptives(descriptives, 'subjectIx'))
+  # assertthat::assert_that(assertthat::descriptives(inferentials, 'subjectIx'))
 
   descriptives %>%
     dplyr::left_join(inferentials, by = "subjectIx")
+
 }
 
+#' Logistic function
+#'
+#' @param x data
+#' @export
+logistic <- function(x) {
+  1 / (1 + exp(-x))
+  }
 
 #' Savage-Dicky density ratio test
 #'
-#' @param samples
-#' @param prior
+#' @param samples MCMC samples
+#' @param prior prior
 
 savage_dickey <- function(samples, prior = dnorm( 0 , 1/2^2 )) {
   fit.posterior <- polspline::logspline(samples)
@@ -72,86 +108,168 @@ show_trial_numbers <- function(df) {
 #' @param data a data frame containing the data; y variable should be coded as integers
 #' @param y_name e.g. 'r_bi'
 #' @param x_name e.g. 't_d'
-#' @param num_saved_steps
-#' @param thin_steps
-#' @param file_name_root
-#' @param graph_file_type
+#' @param num_saved_steps number of saved steps
+#' @param thin_steps how many steps for thinning
+#' @param file_name_root base file name for output
+#' @param graph_file_type graphic output format (defaults to 'eps')
 #' @export
-test_if_idv <- function(tib, y_name, x_name, num_saved_steps = 15000, thin_steps = 2, file_name_root, graph_file_type = 'eps') {
+test_if_idv <- function(tibb) {
+
+  # Specify some functions -----------------------------------------------------
+  bayesian_logistic_regression <-
+    function(df, y_name, x_name, num_saved_steps = 15000, thin_steps = 2,
+             file_name_root, graph_file_type = 'eps') {
 
       # Markov-chain Monte Carlo
-      mcmcCoda = genMCMC(data = tib,
+      mcmcCoda = genMCMC(data = df,
                          xName = x_name,
                          yName = y_name,
                          numSavedSteps = num_saved_steps,
                          thinSteps = thin_steps,
                          saveName = file_name_root
-      )
+                         )
 
       # Display diagnostics of chain, for specified parameters (and write to disk)
       parameterNames = varnames(mcmcCoda) # get all parameter names
-      for (parName in parameterNames) {
-        diagMCMC(codaObject = mcmcCoda,
-                 parName = parName,
-                 saveName = file_name_root,
-                 saveType  = graph_file_type
-        )
-      }
-
-      # Get summary statistics of chain
-      summaryInfo = smryMCMC(mcmcCoda,
-                             saveName = file_name_root
-      )
-      show(summaryInfo)
-
-      # Display posterior information
-      plotMCMC(mcmcCoda,
-               data = tib,
-               xName = x_name,
-               yName = y_name,
-               pairsPlot = TRUE,
-               showCurve = FALSE,
+    for (parName in parameterNames) {
+      diagMCMC(codaObject = mcmcCoda,
+               parName = parName,
                saveName = file_name_root,
-               saveType = graph_file_type)
-
-      # Compute Bayes Factor using Savage-Dickey density ratio test
-      BF01_savage <- savage_dickey(mcmcCoda[,'zbeta'])
-      BF10_savage <- 1 / BF01_savage
-
-      # Step 7 - # Put the relevant stats in a tibble
-      # df_bf_output <- tibble::tibble(subjectIx = i,
-      #                                model = "B01",
-      #                                B = BF01_savage,
-      #                                log10B = log10(BF01_savage),
-      #                                label = cut(BF01_savage,
-      #                                            breaks = get_bf_settings("breaks"),
-      #                                            labels = get_bf_settings("labels"))
-      # )
-
-      # Close XQuartz windows
-      for (idev in seq(from = 2, to = max(dev.list()))) {
-        dev.off(which = idev)
-      }
-
-      list(params = summaryInfo,
-           bf = tibble::tibble(model = "B01",
-                               B = BF01_savage,
-                               log10B = log10(BF01_savage),
-                               label = cut(BF01_savage,
-                                           breaks = get_bf_settings("breaks"),
-                                           labels = get_bf_settings("labels")
-                                           )
-                               )
+               saveType  = graph_file_type
       )
+    }
+
+    # Get summary statistics of chain
+    summaryInfo = smryMCMC(mcmcCoda,
+                           saveName = file_name_root
+    )
+    show(summaryInfo)
+
+    # Display posterior information
+    plotMCMC(mcmcCoda,
+             data = df,
+             xName = x_name,
+             yName = y_name,
+             pairsPlot = TRUE,
+             showCurve = FALSE,
+             saveName = file_name_root,
+             saveType = graph_file_type)
+
+    # Compute Bayes Factor using Savage-Dickey density ratio test
+    BF01_savage <- savage_dickey(mcmcCoda[,'beta'])
+    BF10_savage <- 1 / BF01_savage
+
+    # Step 7 - # Put the relevant stats in a tibble
+    df_bf_output <- tibble::tibble(model = "B01",
+                                   B = BF01_savage,
+                                   log10B = log10(BF01_savage),
+                                   label = cut(BF01_savage,
+                                               breaks = get_bf_settings("breaks"),
+                                               labels = get_bf_settings("labels"))
+    )
+
+    # Close XQuartz windows
+    for (idev in seq(from = 2, to = max(dev.list()))) {
+      dev.off(which = idev)
+    }
+
+    list(params = summaryInfo,
+         bf = tibble::tibble(model = "B01",
+                             B = BF01_savage,
+                             log10B = log10(BF01_savage),
+                             label = cut(BF01_savage,
+                                         breaks = get_bf_settings("breaks"),
+                                         labels = get_bf_settings("labels")
+                             )
+         )
+    )
+  }
+
+  # Make a tibble for storing descriptive and inferential statistics -----------
+  bf_and_params <-
+    tibble::tibble(subjectIx = integer(),
+                   model = character(),
+                   B = double(),
+                   log10B = double(),
+                   label = character(),
+                   mean_beta0 = double(),
+                   mean_beta = double()
+    )
+
+  # Loop over participants
+  for (i_subject in unique(tibb$subjectIx)) {
+
+    # Select data
+    df_sub <-
+      tibb %>%
+      dplyr::filter(subjectIx == i_subject) %>%
+      dplyr::select(t_d,r_bi) %>%
+      dplyr::mutate(r_bi = as.integer(r_bi),
+                    t_d = as.numeric(levels(t_d)[t_d])) %>%
+      as.data.frame(.)
+
+
+    # Perform Bayesian logistic regression and compute BF with Savage-Dickey density method
+    # N.B. Graphics showing diagnostics and best-fits are written to disk
+    bf_sub <-
+      bayesian_logistic_regression(df = df_sub,
+                                   y_name = 'r_bi',
+                                   x_name = 't_d',
+                                   file_name_root = file.path(figures_dir,
+                                                              notebook_name,
+                                                              sprintf('sub-%.02d',as.integer(i_subject))),
+                                   graph_file_type = 'eps')
+
+    # Store descriptive and inferential statistics in data frame
+    bf_and_params <-
+      tibble::add_row(bf_and_params,
+                      subjectIx = i_subject,
+                      model = bf_sub$bf$model,
+                      B = bf_sub$bf$B,
+                      log10B = bf_sub$bf$log10B,
+                      label = bf_sub$bf$label,
+                      mean_beta0 = bf_sub$params['beta0','Mean'],
+                      mean_beta = bf_sub$params['beta','Mean']
+
+      )
+
+  }
+
+  # Output
+  bf_and_params
+
 }
 
 #' Test of inhibition function for group-level data
 #'
 #' Tests the independent race model's qualitative prediction that the probability of responding given a stop-signal increases as a function of stop-signal delay, in group-level data.
-#'
-#' @inheritParams test_if_idv
-test_if_grp <- function() {
+#' @param tibb tibble containing subject-level data, including Bayesian logistic regression parameter estimates
+#' @param par_name name of the parameter containing the estimate of the logistic regression slope
+test_if_grp <- function(tibb, par_name) {
 
+  df <-
+    tibb %>%
+    as.data.frame()
+
+  B_data <-
+    BayesFactor::ttestBF(x = df[[par_name]],
+                         # The independent race model predicts a positive slope
+                         nullInterval = c(0, Inf),
+                         rscale = irmass::get_bf_settings('rscale')
+                         )
+  B10 <- exp(B_data@bayesFactor$bf[1])
+  B01 <- 1 / B10
+
+  tibble::tibble(
+    model = "B01",
+    B = B01,
+    log10B = log10(B01),
+    error = B_data@bayesFactor$error[1],
+    label = cut(B01,
+                breaks = get_bf_settings('breaks'),
+                labels = get_bf_settings('labels')
+                )
+    )
 }
 
 #' Test of stop-respond RT vs. no-signal RT for individual-level data
@@ -160,12 +278,14 @@ test_if_grp <- function() {
 #'
 #' @param tibb tibble with trial-level data
 #' @param trial_alt_levels 2-element character vector containing the levels to contrast
+#' @export
 test_srrt_vs_nsrt_idv <- function(tibb, trial_alt_levels) {
 
   # Assertions
   assertthat::assert_that(assertthat::has_name(tibb, 'trial_alt'))
   assertthat::assert_that(assertthat::has_name(tibb, 'RT_trial'))
   assertthat::assert_that(assertthat::has_name(tibb, 'RT_trial_inv'))
+  assertthat::assert_that(trial_alt_levels[2] == 'NS')
 
   # Bayes Factor packages cannot handle tibbles, so:
   # - convert to data frame
@@ -176,35 +296,48 @@ test_srrt_vs_nsrt_idv <- function(tibb, trial_alt_levels) {
     as.data.frame(.)
   df$trial_alt <- factor(df$trial_alt, levels = trial_alt_levels)
 
-  # Get Bayes Factors and their inverse
+  # For each subject, get Bayes Factors and their inverse
   B10_data <-
     df %>%
     split(.$subjectIx) %>%
     # Perform an independent Bayesian t-test (trials assumed independent)
+
+    # Note that we're comparings inverse response times; the race model predicts that stop-respond response times are shorter than no-signal response times (i.e. mean stop-respond RT - mean no-signal RT is negative). Consequently, the race model predicts that inverse stop-respond response times are longer than no-signal response times (i.e. mean inverse stop-respond RT - mean inverse no-signal RT is positive). So, we perform a one-sided Bayesian t-test, with the null interval in the positive range.
+
+
+    # Null, mu1 - mu2 = d = 0, where
+    # mu1 = RT_trial_inv_SAS
+    # mu1 = RT_trial_inv_NS
+
+    # Alt. 1: r=0.5 0<d<Inf
+    # Alt. 2: r=0.5 !(0<d<Inf)
+
     purrr::map(~BayesFactor::ttestBF(formula = RT_trial_inv ~ trial_alt,
                                      data = .,
+                                     nullInterval = c(0, Inf),
                                      rscale = get_bf_settings('rscale')
                                      )
                )
 
-    # Take the inverse
-    B01_data <- purrr::map(B10_data, ~1/.)
+    # Take the inverse (i.e. Evidence for Null vs. Evidence for Alt. 1)
+    B01_data <- purrr::map(B10_data, ~1/.[1])
 
     # Note that Bayes Factors are stored as log BF, so we need to take exponential
     B01 <- B01_data %>% purrr::map_dbl(~.@bayesFactor$bf) %>% exp()
 
     # Put the relevant stats in a tibble
     tibble::tibble(
-      subjectIx = names(B10_data),
+      subjectIx = factor(as.integer(names(B10_data))),
       model = "B01",
       B = B01,
       log10B = log10(B01),
-      B_rank = dplyr::min_rank(B01),
+      # B_rank = dplyr::min_rank(B01),
       error = B01_data %>% purrr::map_dbl(~.@bayesFactor$error),
       label = cut(B01,
                   breaks = get_bf_settings('breaks'),
                   labels = get_bf_settings('labels'))
-    )
+    ) %>%
+      dplyr::mutate(subjectIx = factor(subjectIx))
 }
 
 #' Test of stop-respond RT vs. no-signal RT for group-level data
@@ -221,15 +354,21 @@ test_srrt_vs_nsrt_grp <- function(data, sr, ns) {
     data %>%
     as.data.frame(.)
 
-
   # Bayesian paired t-test
   B10_data <-
     BayesFactor::ttestBF(x = df[[sr]],
                          y = df[[ns]],
                          paired = TRUE,
-                         rscale = get_bf_settings('rscale'))
+                         nullInterval = c(-Inf,0), # race model predicts shorter RTs on sr than ns trials
+                         rscale = get_bf_settings('rscale')
+                         )
 
-  B01_data <- 1 / B10_data
+  # B10 data returns Bayes factor for two models:
+  # - selected interval, -Inf < delta < 0,
+  # - the complement interval, not -Inf < delta < 0
+  # We're interested in the first model
+
+  B01_data <- 1 / B10_data[1]
 
   # Bayes Factors are stored as log BF, so we need to take exponential
   B01 <- exp(B01_data@bayesFactor$bf)
@@ -250,8 +389,97 @@ test_srrt_vs_nsrt_grp <- function(data, sr, ns) {
 #' Test of stop-respond RT vs. stop-signal delay for individual-level data
 #'
 #' Bayesian ANOVA
-test_effect_ssd_on_srrt_idv <- function() {
+#' @param tibb a tibble containing the data for the analysis
+#' @export
+test_effect_ssd_on_srrt_idv <- function(tibb) {
 
+  # Assertions
+  assertthat::assert_that(assertthat::has_name(tibb, 't_d_alt'))
+  assertthat::assert_that(assertthat::has_name(tibb, 'RT_trial'))
+  assertthat::assert_that(assertthat::has_name(tibb, 'RT_trial_inv'))
+  assertthat::assert_that(is.ordered(tibb$t_d_alt))
+
+  get_full_anova_model <- function(tibb) {
+    tibb %>%
+      as.data.frame() %>%
+      BayesFactor::anovaBF(formula = RT_trial_inv ~ t_d_alt,
+                           data = .,
+                           rscaleFixed = get_bf_settings('rscale')
+      )
+  }
+
+  get_bf_null_vs_full <- function(model) {
+    # Bayes Factors are stored as log BF, so we need to take exponential
+    1 / exp(model@bayesFactor$bf)
+  }
+
+  get_bf_null_vs_order_restricted <- function(tibb, model) {
+
+    t_d_alt_levels <- c('short','intermediate','long')
+
+    # Assertions
+    assertthat::assert_that(all(levels(tibb$t_d_alt) %in% t_d_alt_levels))
+    assertthat::assert_that(length(levels(tibb$t_d_alt)) == 3)
+
+    df <-
+      tibb %>%
+      as.data.frame()
+
+    # Number of ways in which t_d_alt levels could be ordered
+    n_orderings <- length(combinat::permn(t_d_alt_levels))
+
+    # Number of iterations to sample
+    n_iter <- get_bf_settings('n_iter')
+
+    # Sample from posterior distribution
+    samples <- BayesFactor::posterior(model = model,
+                                      iterations = n_iter)
+
+    # We expect RT on stop-respond trials to increase with t_d.
+    # Therefore, the inverse of RT should decrease with t_d.
+    consistent <-
+      (samples[, "t_d_alt-short"] > samples[, "t_d_alt-intermediate"]) &
+      (samples[, "t_d_alt-intermediate"] > samples[, "t_d_alt-long"])
+
+    # How many of the samples from posterior are consistent with this pattern?
+    # n_consistent <- sum(consistent)
+    # To prevent division by zero
+    n_consistent = max(c(1,sum(consistent)))
+
+    # Compute the BayesFactor of order-restricted model against the full model
+    model_order_restricted_vs_full <- (n_consistent / n_iter) / (1 / n_orderings)
+
+    # Compute the BayesFactor of order-restricted model against the null model
+    model_order_restricted_vs_null <-
+      model_order_restricted_vs_full *
+      as.vector(model)
+
+
+    # Express as null against order-restricted
+    model_null_vs_order_restricted <- 1 / model_order_restricted_vs_null
+
+    model_null_vs_order_restricted
+  }
+
+  # Nested tibble
+  output <-
+    tibb %>%
+    dplyr::group_by(subjectIx) %>%
+    tidyr::nest()
+
+  # Run Bayesian ANOVA on RT_trial_inv with t_d_alt as factor
+  output$model <-
+    purrr::map(output$data, get_full_anova_model)
+
+  # Compute the Bayes factor for the null model (intercept only) vs full model (containing t_d_alt as factor)
+  output$B_null_vs_full <-
+    purrr::map(output$model, get_bf_null_vs_full)
+
+  # Compute the Bayes factor for the null model (intercept only) vs order-restricted model (RT_trial_inv decreases with t_d_alt)
+  output$B_null_vs_order_restricted <-
+    purrr::map2(output$data, output$model, get_bf_null_vs_order_restricted)
+
+  output
 }
 
 #' Test of stop-respond RT vs. stop-signal delay for group-level data
@@ -274,15 +502,22 @@ test_effect_ssd_on_srrt_grp <- function(df) {
     df %>%
     as.data.frame(.)
 
-  require(BayesFactor)
-
   # Compute Bayes factor for full model
-  B_full_vs_null <-
-    BayesFactor::anovaBF(mean_RT ~ t_d_alt + subjectIx,
-                         data = df,
-                         whichRandom = "subjectIx",
-                         rscaleFixed = 0.5
-                         )
+  if ('trial_alt' %in% colnames(df)) {
+    B_full_vs_null <-
+      BayesFactor::anovaBF(mean_RT ~ t_d_alt*trial_alt + subjectIx,
+                           data = df,
+                           whichRandom = "subjectIx",
+                           rscaleFixed = get_bf_settings('rscale')
+      )
+  } else {
+    B_full_vs_null <-
+      BayesFactor::anovaBF(mean_RT ~ t_d_alt + subjectIx,
+                           data = df,
+                           whichRandom = "subjectIx",
+                           rscaleFixed = get_bf_settings('rscale')
+      )
+  }
 
   # Fill in tibble
   for (mdl in rownames(B_full_vs_null@bayesFactor)) {
@@ -332,7 +567,10 @@ test_effect_ssd_on_srrt_grp <- function(df) {
       consistent =
         (samples[, "t_d_alt-short"] < samples[, "t_d_alt-intermediate"]) &
         (samples[, "t_d_alt-intermediate"] < samples[, "t_d_alt-long"])
-      n_consistent = sum(consistent)
+      # n_consistent = sum(consistent)
+
+      # To prevent division by 0
+      n_consistent = max(c(1,sum(consistent)))
 
       # Compute the BayesFactor of order-restricted model against the full model
       B_order_restricted_vs_full = (n_consistent / n_iter) / (1 / n_orderings)

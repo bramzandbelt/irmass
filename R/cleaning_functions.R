@@ -1,5 +1,89 @@
 # Cleaning functions
 
+
+# ==============================================================================
+
+#' Identify analysis-level outliers
+#'
+#' @param df data frame with summary stats for each subject
+#' @param group_vars variables for grouping
+#' @param dep_var dependent variables
+#' @param z_threshold outlier criterion z score (defaults to 2.5)
+#' @export
+identify_outlying_values <- function(df, group_vars, dep_var, z_threshold = 2.5) {
+
+  zscore <- function(x) (x - mean(x))/sd(x)
+  expr_z <- lazyeval::interp(~zscore(x), x = as.name(dep_var))
+
+  df %>%
+    dplyr::group_by_(.dots = group_vars) %>%
+    dplyr::mutate_(.dots = setNames(list(expr_z), "z_score")) %>%
+    dplyr::mutate(is_outlier = abs(z_score) > z_threshold) %>%
+    dplyr::ungroup()
+}
+
+
+
+# ==============================================================================
+
+#' Identify analysis-level outliers
+#'
+#' @param df data frame with summary stats for each subject
+#' @param analysis_id analysis identifier (e.g. 'a5'), corresponds to analysis ID in preregistration document
+#' @param trial_alt_levels trial_alt levels to include
+#' @export
+identify_outliers_analysis_level <- function(df, analysis_id, trial_alt_levels) {
+
+
+
+  # Identify outlying values
+  # if (analysis_id %in% c('a5','a6') {
+  #   df_outlying_vals_identified <-
+  #     df %>%
+  #     # Compute outlying values separately for each trial and delay type
+  #     dplyr::group_by(trial_alt, t_d_alt) %>%
+  #     dplyr::mutate(zscore = (mean_RT - mean(mean_RT)) / sd(mean_RT),
+  #                   is_outlier = abs(zscore) > 2.5
+  #     )
+  #   }
+
+
+  if (analysis_id == 'a5') {
+
+    dplyr::select(subjectIx, trial_alt, mean_RT)
+
+  } else if (analysis_id == 'a6') {
+
+    dplyr::select(subjectIx, t_d_alt, mean_RT) %>%
+      tidyr::spread(key = c(t_d_alt), value = mean_RT)
+
+
+
+    bla <-
+      df_outlying_vals_identified %>%
+      dplyr::filter(trial_alt %in% trial_alt_levels) %>%
+      dplyr::select(subjectIx, t_d_alt, mean_RT) %>%
+
+
+    # Identify outlying subjects
+    outlying_subjects <-
+      df_outlying_vals_identified
+      dplyr::select(subjectIx, t_d_alt, mean_RT) %>%
+      tidyr::spread(key = c(t_d_alt), value = mean_RT)
+
+    df_outlying_subs_removed
+
+
+
+  }
+
+
+}
+
+
+
+
+
 # ==============================================================================
 
 #' Tidy block data
@@ -183,6 +267,10 @@ tidy_trial_data <- function(df) {
                                  )
                           )
            ),
+           trial_alt = forcats::fct_collapse(trial,
+                                             SAS = c("SL","SR"),
+                                             SSS = "SB",
+                                             NS = "NS"),
            t_d = round((s2Ons - s2OnsDt) - (s1Ons - s1OnsDt), digits = 3),
            t_d_alt = ifelse(soaIx %in% 0:2,
                             "short",
@@ -287,11 +375,11 @@ tidy_trial_data <- function(df) {
 
   RT_df <-
     clean_df %>%
-    dplyr::select(subjectIx, blockIx, trialIx, trial, r, t_d, t_d_alt, RT_trial)
+    dplyr::select(subjectIx, blockIx, trialIx, trial, trial_alt, r, t_d, t_d_alt, RT_trial)
 
   resp_df <-
     clean_df %>%
-    dplyr::select(subjectIx, blockIx, trialIx, trial, r, t_d, t_d_alt, r_bi, trialCorrect)
+    dplyr::select(subjectIx, blockIx, trialIx, trial, trial_alt, r, t_d, t_d_alt, r_bi, trialCorrect)
 
   list(RT_df = RT_df, resp_df = resp_df)
 }
@@ -300,19 +388,67 @@ tidy_trial_data <- function(df) {
 
 #' Get column types for extracting data from csv files
 #'
-# '@export
+#' File type can be any of the following:
+#'
+#' expt_block_data - tidied block-level data from experimental session
+#' expt_trial_resp_data - tidied trial-level response data from experimental session
+#' expt_trial_rt_data - tidied trial-level resonse time data from experimental session
+#' log_sess_cols - source data, session-related columns
+#' log_block_cols - source data, block-related columns
+#' log_trial_cols - source data, trial-related columns
+#' log_trial_cols_sub00 - source data, trial-related columns for subject 00
+#' prac_block_data - tidied block-level data from practice session
+#'
+#' @param file_type Type of file to be read
+#' @export
 get_col_types <- function(file_type){
 
-  # blocklog_raw
-  # blocklog_preproc
-  #
-  # triallog_raw
-  # triallog_preproc
-  # triallog_compliant
-
-
   switch(tolower(file_type),
-         sess_cols =
+         expt_block_data =
+           readr::cols_only(subjectIx = readr::col_integer(),
+                            blockId = readr::col_character(),
+                            criterion = readr::col_factor(levels = c("NS_accuracy","NS_mean_RT","NS_mean_RTdiff","SL_accuracy","SR_accuracy","SB_accuracy","IG_accuracy")),
+                            performance = readr::col_double(),
+                            failed = readr::col_logical()
+           ),
+         expt_trial_resp_data =
+           readr::cols_only(subjectIx = readr::col_integer(),
+                            blockIx = readr::col_integer(),
+                            trialIx = readr::col_integer(),
+                            trial = readr::col_factor(levels = c("NS", "SL", "SR", "SB", "IG"),
+                                                      ordered = FALSE
+                                                      ),
+                            trial_alt = readr::col_factor(levels = c("SAS", "SSS", "NS"),
+                                                          ordered = TRUE
+                                                          ),
+                            r = readr::col_character(),
+                            t_d = readr::col_factor(levels = c(0.066, 0.166, 0.266, 0.366, 0.466),
+                                                    ordered = TRUE),
+                            t_d_alt = readr::col_factor(levels = c("short", "intermediate", "long"),
+                                                        ordered = TRUE
+                                                        ),
+                            r_bi = readr::col_logical(),
+                            trialCorrect = readr::col_logical()
+           ),
+         expt_trial_rt_data =
+           readr::cols_only(subjectIx = readr::col_integer(),
+                            blockIx = readr::col_integer(),
+                            trialIx = readr::col_integer(),
+                            trial = readr::col_factor(levels = c("NS", "SL", "SR", "SB", "IG"),
+                                                      ordered = FALSE
+                                                      ),
+                            trial_alt = readr::col_factor(levels = c("SAS", "SSS", "NS"),
+                                                          ordered = TRUE
+                                                          ),
+                            r = readr::col_character(),
+                            t_d = readr::col_factor(levels = c(0.066, 0.166, 0.266, 0.366, 0.466),
+                                                    ordered = TRUE),
+                            t_d_alt = readr::col_factor(levels = c("short", "intermediate", "long"),
+                                                        ordered = TRUE
+                                                        ),
+                            RT_trial = readr::col_double()
+           ),
+         log_sess_cols =
            readr::cols_only(subjectIx = readr::col_integer(),
                             sessDate = readr::col_date(format = "%Y-%m-%d"),
                             studyId = readr::col_character(),
@@ -321,7 +457,7 @@ get_col_types <- function(file_type){
                             responseDevice = readr::col_character(),
                             blockId = readr::col_character()
                             ),
-         block_cols =
+         log_block_cols =
            readr::cols_only(subjectIx = readr::col_integer(),
                             taskVersionId = readr::col_character(),
                             blockId = readr::col_character(),
@@ -347,7 +483,7 @@ get_col_types <- function(file_type){
                             s1MeanRtDiff_01 = readr::col_double(),
                             s1MeanRtDiffCritMet_01 = readr::col_logical()
                             ),
-         trial_cols =
+         log_trial_cols =
            readr::cols_only(subjectIx = readr::col_integer(),
                             blockId = readr::col_character(),
                             blockIx = readr::col_integer(),
@@ -389,7 +525,7 @@ get_col_types <- function(file_type){
                             responseType = readr::col_character(),
                             trialFeedback = readr::col_character()
                             ),
-         trial_cols_sub00 =
+         log_trial_cols_sub00 =
            readr::cols_only(subjectIx = readr::col_integer(),
                             blockId = readr::col_character(),
                             blockIx = readr::col_integer(),
@@ -430,7 +566,18 @@ get_col_types <- function(file_type){
                             trialType = readr::col_character(),
                             responseType = readr::col_character(),
                             trialFeedback = readr::col_character()
-                            )
+                            ),
+         prac_block_data =
+           readr::cols_only(subjectIx = readr::col_integer(),
+                            blockId = readr::col_character(),
+                            block_type = readr::col_factor(levels = c("NS","AS","SS","mixed"),
+                                                           ordered = TRUE),
+                            attempt = readr::col_factor(levels = c(1, 2, 3, 4, 5),
+                                                        ordered = TRUE),
+                            criterion = readr::col_factor(levels = c("NS_accuracy","NS_mean_RT","NS_mean_RTdiff","SL_accuracy","SR_accuracy","SB_accuracy","IG_accuracy")),
+                            performance = readr::col_double(),
+                            failed = readr::col_logical()
+           )
          )
 
 }
