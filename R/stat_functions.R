@@ -279,7 +279,7 @@ test_if_grp <- function(tibb, par_name) {
 #' @param tibb tibble with trial-level data
 #' @param trial_alt_levels 2-element character vector containing the levels to contrast
 #' @export
-test_srrt_vs_nsrt_idv <- function(tibb, trial_alt_levels) {
+test_srrt_vs_nsrt_idv <- function(tibb, trial_alt_levels, rscale = get_bf_settings('rscale')) {
 
   # Assertions
   assertthat::assert_that(assertthat::has_name(tibb, 'trial_alt'))
@@ -315,7 +315,7 @@ test_srrt_vs_nsrt_idv <- function(tibb, trial_alt_levels) {
     purrr::map(~BayesFactor::ttestBF(formula = RT_trial_inv ~ trial_alt,
                                      data = .,
                                      nullInterval = c(0, Inf),
-                                     rscale = get_bf_settings('rscale')
+                                     rscale = rscale
                                      )
                )
 
@@ -391,7 +391,7 @@ test_srrt_vs_nsrt_grp <- function(data, sr, ns) {
 #' Bayesian ANOVA
 #' @param tibb a tibble containing the data for the analysis
 #' @export
-test_effect_ssd_on_srrt_idv <- function(tibb) {
+test_effect_ssd_on_srrt_idv <- function(tibb, rscale = get_bf_settings('rscale')) {
 
   # Assertions
   assertthat::assert_that(assertthat::has_name(tibb, 't_d_alt'))
@@ -404,7 +404,7 @@ test_effect_ssd_on_srrt_idv <- function(tibb) {
       as.data.frame() %>%
       BayesFactor::anovaBF(formula = RT_trial_inv ~ t_d_alt,
                            data = .,
-                           rscaleFixed = get_bf_settings('rscale')
+                           rscaleFixed = rscale
       )
   }
 
