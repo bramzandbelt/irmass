@@ -90,7 +90,7 @@ rank_by_bayes_factor <- function(tibb, bvar = "B") {
 
   # Reorder subjects based on Bayes factor -------------------------------------
   tibb$subjectIx <- factor(tibb$subjectIx,
-                           levels = subject_levels)
+                           levels = unique(subject_levels))
 
   # Output ---------------------------------------------------------------------
   tibb
