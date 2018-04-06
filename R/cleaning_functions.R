@@ -472,20 +472,17 @@ get_col_types <- function(file_type){
                             trialIx = readr::col_integer(),
                             trial = readr::col_factor(levels = c("NS", "SL", "SR", "SB", "IG"),
                                                       ordered = FALSE
-                                                      ),
+                            ),
                             trial_alt = readr::col_factor(levels = c("SAS", "SSS", "NS"),
                                                           ordered = TRUE
-                                                          ),
+                            ),
                             r = readr::col_character(),
-                            responseType = readr::col_character(),
                             t_d = readr::col_factor(levels = c(0.066, 0.166, 0.266, 0.366, 0.466),
                                                     ordered = TRUE),
                             t_d_alt = readr::col_factor(levels = c("short", "intermediate", "long"),
                                                         ordered = TRUE
-                                                        ),
-                            RT_trial = readr::col_double(),
-                            trialCorrect = readr::col_logical(),
-                            trial_performance = readr::col_character()
+                            ),
+                            RT_trial = readr::col_double()
            ),
          expt_trial_rt_data_exploratory =
            readr::cols_only(subjectIx = readr::col_integer(),
@@ -498,12 +495,15 @@ get_col_types <- function(file_type){
                                                           ordered = TRUE
                             ),
                             r = readr::col_character(),
+                            responseType = readr::col_character(),
                             t_d = readr::col_factor(levels = c(0.066, 0.166, 0.266, 0.366, 0.466),
                                                     ordered = TRUE),
                             t_d_alt = readr::col_factor(levels = c("short", "intermediate", "long"),
                                                         ordered = TRUE
                             ),
-                            RT_trial = readr::col_double()
+                            RT_trial = readr::col_double(),
+                            trialCorrect = readr::col_logical(),
+                            trial_performance = readr::col_character()
            ),
          log_sess_cols =
            readr::cols_only(subjectIx = readr::col_integer(),
