@@ -234,8 +234,12 @@ tidy_block_data <- function(df, stage = 'expt') {
 #'
 #' Tidying involves the following steps
 #' - renaming and computing variables in line with preregistration
+#'
+#' For confirmatory analyses, only the necessary variables are returned. For exploratory analysis, all variables are returned.
+#' @param df Data frame with minimally processed trial data
+#' @param analysis_type Analysis type: 'confirmatory' or 'exploratory'
 #' @export
-tidy_trial_data <- function(df) {
+tidy_trial_data <- function(df, analysis_type = 'confirmatory') {
 
   # Manipulated variables (see §2.5.1. of the preregistration) =================
 
@@ -373,13 +377,24 @@ tidy_trial_data <- function(df) {
       )
       )
 
-  RT_df <-
-    clean_df %>%
-    dplyr::select(subjectIx, blockIx, trialIx, trial, trial_alt, r, t_d, t_d_alt, RT_trial)
+  # Select relevant variables (for confirmatory analysis) or return everything (for exploratory analysis)
+  if (analysis_type == 'confirmatory') {
+    RT_df <-
+      clean_df %>%
+      dplyr::select(subjectIx, blockIx, trialIx, trial, trial_alt, r, t_d, t_d_alt, RT_trial)
 
-  resp_df <-
-    clean_df %>%
-    dplyr::select(subjectIx, blockIx, trialIx, trial, trial_alt, r, t_d, t_d_alt, r_bi, trialCorrect)
+    resp_df <-
+      clean_df %>%
+      dplyr::select(subjectIx, blockIx, trialIx, trial, trial_alt, r, t_d, t_d_alt, r_bi, trialCorrect)
+  } else if (analysis_type == 'exploratory') {
+    RT_df <-
+      clean_df %>%
+      dplyr::select(subjectIx, blockIx, trialIx, trial, trial_alt, r, responseType, t_d, t_d_alt, RT_trial, trialCorrect, trial_performance)
+    resp_df <-
+      clean_df %>%
+      dplyr::select(subjectIx, blockIx, trialIx, trial, trial_alt, r, responseType, t_d, t_d_alt, r_bi, trialCorrect, trial_performance)
+  }
+
 
   list(RT_df = RT_df, resp_df = resp_df)
 }
@@ -430,6 +445,27 @@ get_col_types <- function(file_type){
                             r_bi = readr::col_logical(),
                             trialCorrect = readr::col_logical()
            ),
+         expt_trial_resp_data_exploratory =
+           readr::cols_only(subjectIx = readr::col_integer(),
+                            blockIx = readr::col_integer(),
+                            trialIx = readr::col_integer(),
+                            trial = readr::col_factor(levels = c("NS", "SL", "SR", "SB", "IG"),
+                                                      ordered = FALSE
+                            ),
+                            trial_alt = readr::col_factor(levels = c("SAS", "SSS", "NS"),
+                                                          ordered = TRUE
+                            ),
+                            r = readr::col_character(),
+                            responseType = readr::col_character(),
+                            t_d = readr::col_factor(levels = c(0.066, 0.166, 0.266, 0.366, 0.466),
+                                                    ordered = TRUE),
+                            t_d_alt = readr::col_factor(levels = c("short", "intermediate", "long"),
+                                                        ordered = TRUE
+                            ),
+                            r_bi = readr::col_logical(),
+                            trialCorrect = readr::col_logical(),
+                            trial_performance = readr::col_character()
+           ),
          expt_trial_rt_data =
            readr::cols_only(subjectIx = readr::col_integer(),
                             blockIx = readr::col_integer(),
@@ -441,11 +477,32 @@ get_col_types <- function(file_type){
                                                           ordered = TRUE
                                                           ),
                             r = readr::col_character(),
+                            responseType = readr::col_character(),
                             t_d = readr::col_factor(levels = c(0.066, 0.166, 0.266, 0.366, 0.466),
                                                     ordered = TRUE),
                             t_d_alt = readr::col_factor(levels = c("short", "intermediate", "long"),
                                                         ordered = TRUE
                                                         ),
+                            RT_trial = readr::col_double(),
+                            trialCorrect = readr::col_logical(),
+                            trial_performance = readr::col_character()
+           ),
+         expt_trial_rt_data_exploratory =
+           readr::cols_only(subjectIx = readr::col_integer(),
+                            blockIx = readr::col_integer(),
+                            trialIx = readr::col_integer(),
+                            trial = readr::col_factor(levels = c("NS", "SL", "SR", "SB", "IG"),
+                                                      ordered = FALSE
+                            ),
+                            trial_alt = readr::col_factor(levels = c("SAS", "SSS", "NS"),
+                                                          ordered = TRUE
+                            ),
+                            r = readr::col_character(),
+                            t_d = readr::col_factor(levels = c(0.066, 0.166, 0.266, 0.366, 0.466),
+                                                    ordered = TRUE),
+                            t_d_alt = readr::col_factor(levels = c("short", "intermediate", "long"),
+                                                        ordered = TRUE
+                            ),
                             RT_trial = readr::col_double()
            ),
          log_sess_cols =

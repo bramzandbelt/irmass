@@ -166,6 +166,9 @@ expt_block_data_tidied
 ```{r Reorganize and tidy trial data}
 prac_trial_data_tidied <- irmass::tidy_trial_data(prac_trial_data)
 expt_trial_data_tidied <- irmass::tidy_trial_data(expt_trial_data)
+
+expt_trial_data_exploratory_tidied <- irmass::tidy_trial_data(expt_trial_data, analysis_type = 'exploratory')
+
 ```
 
 Tidy practice trial data - responses
@@ -244,6 +247,18 @@ readr::write_csv(expt_trial_data_tidied$RT_df,
                  path = file.path(derivatives_dir, 
                                   notebook_name, 
                                   'tidy_expt_trial_rt_data.csv'),
+                 col_names = TRUE)
+
+readr::write_csv(expt_trial_data_exploratory_tidied$resp_df,
+                 path = file.path(derivatives_dir, 
+                                  notebook_name, 
+                                  'tidy_expt_trial_exploratory_resp_data.csv'),
+                 col_names = TRUE)
+
+readr::write_csv(expt_trial_data_exploratory_tidied$RT_df,
+                 path = file.path(derivatives_dir, 
+                                  notebook_name, 
+                                  'tidy_expt_trial_exploratory_rt_data.csv'),
                  col_names = TRUE)
           
 
