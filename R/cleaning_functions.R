@@ -138,7 +138,7 @@ tidy_block_data <- function(df, stage = 'expt') {
                       SL_accuracy_failed, SR_accuracy_failed, SB_accuracy_failed, IG_accuracy_failed
                       ) %>%
         dplyr::group_by(subjectIx,blockId) %>%
-        dplyr::mutate(attempt = 1:n()) %>%
+        dplyr::mutate(attempt = 1:dplyr::n()) %>%
         dplyr::ungroup()
 
     } else if (stage == 'expt') {
@@ -347,8 +347,9 @@ tidy_trial_data <- function(df, analysis_type = 'confirmatory') {
                                 )
                   ) %>%
 
-    # Trial-level response time (RT_{trial})
-    dplyr::mutate(RT_trial = rt1_mean) %>%
+    # Trial-level response time (RT_{trial}); also include RT difference for reporting of descriptive statistics
+    dplyr::mutate(RT_trial = rt1_mean,
+                  RT_diff_trial = rtDiff1_mean) %>%
 
     # Trial label - performance ($trial_{performance}$)
     dplyr::mutate(trial_performance = dplyr::case_when(
@@ -381,7 +382,7 @@ tidy_trial_data <- function(df, analysis_type = 'confirmatory') {
   if (analysis_type == 'confirmatory') {
     RT_df <-
       clean_df %>%
-      dplyr::select(subjectIx, blockIx, trialIx, trial, trial_alt, r, t_d, t_d_alt, RT_trial)
+      dplyr::select(subjectIx, blockIx, trialIx, trial, trial_alt, r, t_d, t_d_alt, RT_trial, RT_diff_trial)
 
     resp_df <-
       clean_df %>%
@@ -389,7 +390,7 @@ tidy_trial_data <- function(df, analysis_type = 'confirmatory') {
   } else if (analysis_type == 'exploratory') {
     RT_df <-
       clean_df %>%
-      dplyr::select(subjectIx, blockIx, trialIx, trial, trial_alt, r, responseType, t_d, t_d_alt, RT_trial, trialCorrect, trial_performance)
+      dplyr::select(subjectIx, blockIx, trialIx, trial, trial_alt, r, responseType, t_d, t_d_alt, RT_trial, RT_diff_trial, trialCorrect, trial_performance)
     resp_df <-
       clean_df %>%
       dplyr::select(subjectIx, blockIx, trialIx, trial, trial_alt, r, responseType, t_d, t_d_alt, r_bi, trialCorrect, trial_performance)
