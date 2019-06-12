@@ -90,7 +90,7 @@ rank_by_bayes_factor <- function(tibb, bvar = "B") {
 
   # Reorder subjects based on Bayes factor -------------------------------------
   tibb$subjectIx <- factor(tibb$subjectIx,
-                           levels = unique(subject_levels))
+                           levels = rev(unique(subject_levels)))
 
   # Output ---------------------------------------------------------------------
   tibb
@@ -224,7 +224,9 @@ plot_overview <- function(data, xvar, xvardesc, yorder, yticklabels, fillvar, fi
 #' @param colorbar Color bar variables
 #' @param xvar x axis variable
 #' @param bvar Bayes factor variable
-plot_idv_rt_data_bf <- function(trial_data, bf_data, summary_data, colorbar, xvar, bvar) {
+#' @param plot_orientation horizontal or vertical
+#' @param bf_as_background whether or not plot background should encodes Bayes Factor
+plot_idv_rt_data_bf <- function(trial_data, bf_data, summary_data, colorbar, xvar, bvar, plot_orientation, bf_as_background) {
 
   # Main variables (x, y, fill, label) -----------------------------------------
   plt <- ggplot2::ggplot(trial_data,
@@ -233,118 +235,191 @@ plot_idv_rt_data_bf <- function(trial_data, bf_data, summary_data, colorbar, xva
   )
 
   # Facets ---------------------------------------------------------------------
-  plt <- plt + ggplot2::facet_wrap("subjectIx",
-                                   nrow = 2
-  )
+  if (plot_orientation == 'vertical') {
+
+    plt <- plt + ggplot2::facet_wrap("subjectIx",
+                                     nrow = 2
+    )
+
+  } else if (plot_orientation == 'horizontal') {
+    plt <- plt + ggplot2::facet_wrap("subjectIx",
+                                     ncol = 4
+    )
+  }
+
+
 
   # Geoms  ---------------------------------------------------------------------
   # Bayes factor
 
   if (xvar == 'trial_alt') {
     x = 1.5
-    # labels = c('stop-respond','no-signal')
-    labels = c('S-R','N-S')
+    if (plot_orientation == 'vertical') {
+      labels = c('S-R','N-S')
+    } else if (plot_orientation == 'horizontal') {
+      labels = c('stop-respond','no-signal')
+    }
     x_axis_name = 'Trial type'
   } else if (xvar == 't_d_alt') {
     x = 2
-    # labels = c('short', 'intermediate', 'long')
-    labels = c('S', 'I', 'L')
+
+    if (plot_orientation == 'vertical') {
+      labels = c('S', 'I', 'L')
+    } else if (plot_orientation == 'horizontal') {
+      labels = c('short', 'intermediate', 'long')
+    }
+
     x_axis_name = 'Stop-signal delay category'
+  }
+
+
+  # Shape depends on plot orientation
+  if (plot_orientation == 'vertical') {
+    shape_id = 21
+  } else if (plot_orientation == 'horizontal') {
+    shape_id = 21
+  }
+
+  if (bf_as_background) {
+    plt <-
+      plt +
+
+      # Background
+      ggplot2::geom_rect(ggplot2::aes_string(fill = bvar),
+                         xmin = -Inf,
+                         xmax = Inf,
+                         ymin = -Inf,
+                         ymax = Inf,
+                         alpha = 0.3
+      )
+
   }
 
   plt <-
     plt +
 
-    # Background
-    ggplot2::geom_rect(ggplot2::aes_string(fill = bvar),
-                       xmin = -Inf,
-                       xmax = Inf,
-                       ymin = -Inf,
-                       ymax = Inf,
-                       alpha = 0.3
-    ) +
-
     # Individual trial RT data
     ggbeeswarm::geom_quasirandom(fill = NA,
                                  shape = 42, # asterisk
-                                 size = 2,
+                                 size = 3,
                                  stroke = 0.25,
-                                 alpha = 0.75 #0.25
+                                 alpha = 0.50 #0.25
     ) +
 
     # Trial mean RT data
     ggplot2::geom_point(data = summary_data,
                         ggplot2::aes_string(x = xvar,
                                             y = 'mean_RT_trial'),
-                        shape = 45,
-                        size = 5,
-                        color = '#ffffff'
-    ) +
+                        shape = shape_id,
+                        size = 1.5,
+                        stroke = 1.5,
+                        color = "white",
+                        fill = "black"
+    )
 
-    switch(bvar,
-           'B' = ggplot2::geom_text(data = bf_data,
-                                    ggplot2::aes(label = fancy_scientific(B)),
-                                    x = x,
-                                    y = 0.2,
-                                    size = 2.5,
-                                    parse = TRUE
-                                    ),
-           'B_null_vs_order_restricted' = ggplot2::geom_text(data = bf_data,
-                                                             ggplot2::aes(label = fancy_scientific(B_null_vs_order_restricted)),
-                                                             x = x,
-                                                             y = 0.2,
-                                                             size = 2.5,
-                                                             parse = TRUE
-           )
-           )
+    if (plot_orientation == 'vertical') {
+      plt <-
+        plt +
+        switch(bvar,
+               'B' = ggplot2::geom_text(data = bf_data,
+                                        ggplot2::aes(label = fancy_scientific(B)),
+                                        x = x,
+                                        y = 0.2,
+                                        size = 2.5,
+                                        parse = TRUE
+               ),
+               'B_null_vs_order_restricted' = ggplot2::geom_text(data = bf_data,
+                                                                 ggplot2::aes(label = fancy_scientific(B_null_vs_order_restricted)),
+                                                                 x = x,
+                                                                 y = 0.2,
+                                                                 size = 2.5,
+                                                                 parse = TRUE
+               )
+        )
 
+    } else if (plot_orientation == 'horizontal') {
+      plt <-
+        plt +
+        ggplot2::geom_text(mapping = ggplot2::aes(label = subjectIx),
+                           x = Inf,
+                           y = Inf,
+                           hjust = 1,
+                           vjust = 1,
+                           size = 2.5,
+                           fontface = "plain"
+                           )
 
+    }
 
   # Scales  --------------------------------------------------------------------
 
-  plt <-
-    plt +
+  if (bf_as_background) {
 
-    switch(bvar,
-           'B' = ggplot2::scale_fill_gradient2(midpoint = 0,
-                                               # Colorblind-friendly colors
-                                               low = "#91bfdb",
-                                               mid = "#ffffbf",
-                                               high = "#fc8d59",
-                                               # name = expression(log['10'](B['01'])),
-                                               name = expression(B['01']),
-                                               breaks = colorbar$breaks,
-                                               labels = parse(text = colorbar$labels),
-                                               # labels = colorbar$labels,
-                                               limits = colorbar$limits,
-                                               trans = 'log10',
-                                               oob = scales::squish
-           ),
-           'B_null_vs_order_restricted' = ggplot2::scale_fill_gradient2(midpoint = 0,
-                                                                        # Colorblind-friendly colors
-                                                                        low = "#91bfdb",
-                                                                        mid = "#ffffbf",
-                                                                        high = "#fc8d59",
-                                                                        # name = expression(log['10'](B['01'])),
-                                                                        name = expression(B['0 vs. order-restricted']),
-                                                                        breaks = colorbar$breaks,
-                                                                        labels = parse(text = colorbar$labels),
-                                                                        # labels = colorbar$labels,
-                                                                        limits = colorbar$limits,
-                                                                        trans = 'log10',
-                                                                        oob = scales::squish
-           )) +
+    plt <-
+      plt +
 
-    ggplot2::scale_x_discrete(name = x_axis_name,
-                              labels = labels
-    ) +
+      switch(bvar,
+             'B' = ggplot2::scale_fill_gradient2(midpoint = 0,
+                                                 # Colorblind-friendly colors
+                                                 low = "#91bfdb",
+                                                 mid = "#ffffbf",
+                                                 high = "#fc8d59",
+                                                 # name = expression(log['10'](B['01'])),
+                                                 name = expression(B['01']),
+                                                 breaks = colorbar$breaks,
+                                                 labels = parse(text = colorbar$labels),
+                                                 # labels = colorbar$labels,
+                                                 limits = colorbar$limits,
+                                                 trans = 'log10',
+                                                 oob = scales::squish
+             ),
+             'B_null_vs_order_restricted' = ggplot2::scale_fill_gradient2(midpoint = 0,
+                                                                          # Colorblind-friendly colors
+                                                                          low = "#91bfdb",
+                                                                          mid = "#ffffbf",
+                                                                          high = "#fc8d59",
+                                                                          # name = expression(log['10'](B['01'])),
+                                                                          name = expression(B['0 vs. order-restricted']),
+                                                                          breaks = colorbar$breaks,
+                                                                          labels = parse(text = colorbar$labels),
+                                                                          # labels = colorbar$labels,
+                                                                          limits = colorbar$limits,
+                                                                          trans = 'log10',
+                                                                          oob = scales::squish
+             ))
 
-    ggplot2::scale_y_continuous(name = "Response time (s)",
-                                breaks = seq(from = 0.2,to = 1.2, by = 0.2),
-                                limits = c(0.15,1.25)
-    )
+  }
 
 
+  if (xvar == 't_d_alt' & plot_orientation == 'horizontal') {
+    plt <-
+      plt +
+      ggplot2::scale_x_discrete(name = x_axis_name,
+                                labels = labels,
+                                limits = rev(levels(xvar)))
+  } else {
+    plt <-
+      plt +
+      ggplot2::scale_x_discrete(name = x_axis_name,
+                                labels = labels)
+  }
+
+  if (plot_orientation == 'horizontal') {
+
+    plt <-
+      plt +
+      ggplot2::scale_y_continuous(name = "Response time (s)",
+                                  breaks = seq(from = 0.4,to = 1, by = 0.2),
+                                  limits = c(0.2,1.2))
+
+  } else if (plot_orientation == 'vertical') {
+
+    plt <-
+      plt +
+      ggplot2::scale_y_continuous(name = "Response time (s)",
+                                  breaks = seq(from = 0.4,to = 1, by = 0.2),
+                                  limits = c(0.2,1.2))
+    }
     # Theme  ---------------------------------------------------------------------
 
   plt <-
@@ -352,18 +427,51 @@ plot_idv_rt_data_bf <- function(trial_data, bf_data, summary_data, colorbar, xva
     irmass::theme_irmass()
 
   if (xvar == 'trial_alt') {
-    plt <-
-      plt + ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90,
-                                                               hjust = 1
-                                                               )
-                           )
+
+    if (plot_orientation == 'horizontal') {
+      plt <-
+        plt +
+        ggplot2::theme(strip.background = ggplot2::element_blank(),
+                       strip.text = ggplot2::element_blank(),
+                       panel.spacing.x = ggplot2::unit(0.04,"in"),
+                       panel.spacing.y = ggplot2::unit(0.04,"in"),
+                       legend.key.width = ggplot2::unit(6,"line"),
+                       legend.position = "bottom",
+                       legend.text.align = 0.5
+                       ) +
+        ggplot2::coord_flip()
+    } else if (plot_orientation == 'vertical') {
+      plt <-
+        plt + ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90,
+                                                                 hjust = 1),
+                             panel.spacing.x = ggplot2::unit(0.04,"in"),
+                             panel.spacing.y = ggplot2::unit(0.04,"in")
+                             )
+    }
+
   } else if (xvar == 't_d_alt') {
 
-    plt <-
-      plt + ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 0,
-                                                               hjust = 0.5
-                                                               )
-                           )
+    if (plot_orientation == 'horizontal') {
+      plt <-
+        plt +
+        ggplot2::theme(strip.background = ggplot2::element_blank(),
+                       strip.text = ggplot2::element_blank(),
+                       panel.spacing.x = ggplot2::unit(0.04,"in"),
+                       panel.spacing.y = ggplot2::unit(0.04,"in"),
+                       legend.key.width = ggplot2::unit(6,"line"),
+                       legend.position = "bottom",
+                       legend.text.align = 0.5
+        ) +
+        ggplot2::coord_flip()
+    } else if (plot_orientation == 'vertical') {
+      plt <-
+        plt + ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 0,
+                                                                 hjust = 0.5),
+                             panel.spacing.x = ggplot2::unit(0.04,"in"),
+                             panel.spacing.y = ggplot2::unit(0.04,"in")
+        )
+    }
+
   }
 
 }
@@ -399,7 +507,7 @@ plot_if_idv <- function(obs_data, prd_data, bf_data, colorbar, yvar, bvar) {
 
   # Facets ---------------------------------------------------------------------
   plt <- plt + ggplot2::facet_wrap("subjectIx",
-                                   nrow = 4
+                                   nrow = 8
   )
 
   # Geoms  ---------------------------------------------------------------------
@@ -425,16 +533,25 @@ plot_if_idv <- function(obs_data, prd_data, bf_data, colorbar, yvar, bvar) {
                        ggplot2::aes(x = x,
                                     y = y)
                        ) +
-
-    ggplot2::geom_text(data = bf_data,
-                       ggplot2::aes(label = fancy_scientific(B)),
-                       x = 0.75,
-                       y = 0,
+    ggplot2::geom_text(mapping = ggplot2::aes(label = subjectIx),
+                       x = Inf,
+                       y = Inf,
                        hjust = 1,
-                       vjust = 0,
-                       size = 2,
-                       parse = TRUE
+                       vjust = 1,
+                       size = 2.5,
+                       fontface = "plain"
                        )
+
+    # ggplot2::geom_text(data = bf_data,
+    #                    ggplot2::aes(label = fancy_scientific(B)),
+    #                    x = 0.75,
+    #                    y = 0,
+    #                    hjust = 1,
+    #                    vjust = 0,
+    #                    size = 2,
+    #                    parse = TRUE
+    #                    )
+
 
   # Scales  --------------------------------------------------------------------
 
@@ -457,12 +574,13 @@ plot_if_idv <- function(obs_data, prd_data, bf_data, colorbar, yvar, bvar) {
     ) +
 
     ggplot2::scale_x_continuous(name = 'Stop-signal delay (s)',
-                                breaks = c(0, 0.25, 0.5),
-                                limits = c(0, 0.75)
-    ) +
+                                breaks = sort(unique(obs_data$t_d))[c(1,3,5)],
+                                labels = c("0.066", "0.266", "0.466")
+                                ) +
 
     ggplot2::scale_y_continuous(name = 'P(bimanual response | stop-signal)',
-                                breaks = seq(from = 0,to = 1, by = 0.25)
+                                breaks = seq(from = 0.25,to = .75, by = 0.5),
+                                limits = c(0,1)
     )
 
   # Theme  ---------------------------------------------------------------------
@@ -471,7 +589,14 @@ plot_if_idv <- function(obs_data, prd_data, bf_data, colorbar, yvar, bvar) {
     plt +
 
     irmass::theme_irmass() +
-    ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 0,
+    ggplot2::theme(strip.background = ggplot2::element_blank(),
+                   strip.text = ggplot2::element_blank(),
+                   panel.spacing.x = ggplot2::unit(0.04,"in"),
+                   panel.spacing.y = ggplot2::unit(0.04,"in"),
+                   legend.key.width = ggplot2::unit(6,"line"),
+                   legend.position = "bottom",
+                   legend.text.align = 0.5,
+                   axis.text.x = ggplot2::element_text(angle = 0,
                                                        hjust = 0.5
                                                        )
                    )
@@ -483,6 +608,7 @@ plot_if_idv <- function(obs_data, prd_data, bf_data, colorbar, yvar, bvar) {
 #' Plot inhibition function for group-level data
 #' @param obs tibble containing observations
 #' @param prd tibble containing predicted parameter estimates from Bayesian logistic regression model
+#' @export
 plot_if_grp <- function(obs, prd) {
 
   idv_alpha = 0.2
@@ -492,12 +618,10 @@ plot_if_grp <- function(obs, prd) {
                                y = p_respond)
   ) +
 
-    # Observed probability of responding given a stop-signal (open circles)
-    ggplot2::geom_point(shape = 1,
-                        size = 2) +
-
-    # ggbeeswarm::geom_quasirandom(shape = 1,
-    #                              size = 2) +
+    ggbeeswarm::geom_quasirandom(shape = 1,
+                                 size = 2,
+                                 alpha = idv_alpha,
+                                 width = .05) +
 
     # Predicted probability of responding given a stop-signal (line)
     ggplot2::geom_line(data = prd,
@@ -514,9 +638,9 @@ plot_if_grp <- function(obs, prd) {
                           linetype = 'solid',
                           na.rm = TRUE) +
 
-    ggplot2::scale_x_continuous(name = "Stop-signal delay (s)",
-                                breaks = c(min(prd$t_d),unique(obs$t_d),max(prd$t_d)),
-                                limits = c(min(prd$t_d),max(prd$t_d))
+    ggplot2::scale_x_continuous(name = 'Stop-signal delay (s)',
+                                breaks = sort(unique(obs$t_d)),
+                                labels = c("0.066", "0.166", "0.266", "0.366", "0.466")
     ) +
 
     ggplot2::scale_y_continuous(name = "P(respond | stop-signal)") +
@@ -530,7 +654,7 @@ plot_if_grp <- function(obs, prd) {
 #' @param trial_data tibble containing trial-level data
 #' @param bf_data tibble containing subject-level Bayes factor data
 #' @export
-plot_srrt_vs_nsrt_idv <- function(trial_data, bf_data) {
+plot_srrt_vs_nsrt_idv <- function(trial_data, bf_data, plot_orientation = 'vertical', bf_as_background = TRUE) {
 
   # Get colorbar variables for visualizaing Bayes factor data
   colorbar <- get_bf_colorbar_vars()
@@ -582,7 +706,9 @@ plot_srrt_vs_nsrt_idv <- function(trial_data, bf_data) {
                              bf_data = bf_data,
                              colorbar = colorbar,
                              xvar = 'trial_alt',
-                             bvar = 'B')
+                             bvar = 'B',
+                             plot_orientation = plot_orientation,
+                             bf_as_background = bf_as_background)
 
 }
 
@@ -621,7 +747,7 @@ plot_srrt_vs_nsrt_grp <- function(data, sr, ns) {
 #' Plot stop-respond RT vs. stop-signal delay for individual-level data
 #'
 #' @export
-plot_srrt_vs_ssd_idv <- function(trial_data, bf_data) {
+plot_srrt_vs_ssd_idv <- function(trial_data, bf_data, plot_orientation = 'vertical', bf_as_background = TRUE) {
 
   # Preliminaries  -------------------------------------------------------------
 
@@ -677,7 +803,10 @@ plot_srrt_vs_ssd_idv <- function(trial_data, bf_data) {
                              bf_data = bf_data,
                              colorbar = colorbar,
                              xvar = 't_d_alt',
-                             bvar = 'B_null_vs_order_restricted')
+                             bvar = 'B_null_vs_order_restricted',
+                             plot_orientation = plot_orientation,
+                             bf_as_background = bf_as_background
+                             )
 
   # # Main variables (x, y, fill, label) -----------------------------------------
   # plt <- ggplot2::ggplot(trial_data,
@@ -890,4 +1019,86 @@ plot_srrt_vs_ssd_grp <- function(df) {
 
     irmass::theme_irmass()
 
+}
+
+#' plot_mcmc_analysis ##########################################################
+#' Plots graphical diagnostics of MCMC chains (for models fit with brms)
+#'
+#' @param mdl, brmsfit object
+#' @export
+plot_mcmc_analysis <- function(mdl) {
+  mdl_long <- ggmcmc::ggs(mdl)
+
+  # Trace plot
+  plt_trace <-
+    ggmcmc::ggs_traceplot(mdl_long) +
+    ggplot2::facet_wrap("Parameter") +
+    theme_irmass() +
+    ggplot2::theme(legend.position = "bottom",
+                   axis.text.x = ggplot2::element_text(angle = 90,
+                                                       hjust = 1))
+
+  # Plot of Rhat
+  plt_rhat <-
+    ggmcmc::ggs_Rhat(mdl_long) +
+    theme_irmass()
+
+  return(list(plt_trace, plt_rhat))
+}
+
+
+#' plot_posterior ##########################################################
+#' Plots posterior distribution
+#'
+#' @param mdl, brmsfit object
+#' @export
+plot_posterior <- function(mdl) {
+  # the ggmcmc::ggs function transforms the BRMS output into a longformat tibble, that we can use to make different types of plot
+  mdl_long <-
+    ggmcmc::ggs(mdl)
+
+  ggplot2::ggplot(data = mdl_long,
+                  mapping = ggplot2::aes(x = value)) +
+    ggplot2::facet_wrap("Parameter", scales = "free") +
+
+    ggplot2::geom_density(fill = "yellow", alpha = .5) +
+    ggplot2::geom_vline(xintercept = 0, col = "red", size = 1) +
+    ggplot2::scale_x_continuous(name = "Value") +
+    ggplot2::scale_y_continuous(breaks = NULL) +
+    ggplot2::expand_limits(x = 0) +
+    # ggplot2::geom_vline(xintercept = summary(mdl)$fixed[stringr::str_remove(par_name, "b_"), 3:4],
+    #                     col = "blue",
+    #                     linetype = 2) +
+    irmass::theme_irmass() +
+    ggplot2::labs(title = "Posterior densities")
+
+}
+
+#' Write figure caption to disk
+#'
+#' @export
+write_fig_cap <- function(fig_title, fig_description, fig_dir, notebook_name, stopping_type) {
+
+  tag <-
+    switch(stopping_type,
+           action_selective = 'action_selective_stopping.txt',
+           stimulus_selective = 'stimulus_selective_stopping.txt',
+           action_and_stimulus_selective = 'action_and_stimulus_selective_stopping.txt'
+           )
+
+  filename_fig_caption <-
+    paste('plot_caption', notebook_name, tag, sep = '_')
+
+  path_fig_caption <-
+    file.path(fig_dir,
+              notebook_name,
+              filename_fig_caption)
+
+  # Write figure caption
+  readr::write_file(paste(fig_title, fig_description, sep = " "),
+                    path = path_fig_caption
+                    )
+
+  # Show where file is written
+  return(path_fig_caption)
 }
