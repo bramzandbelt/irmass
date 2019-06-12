@@ -3,3 +3,5 @@ packrat/lib*/
 inst/doc
 .httr-oauth
 man/*.Rd
+.RData
+.Rhistory
