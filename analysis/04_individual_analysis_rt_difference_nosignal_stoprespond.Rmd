@@ -1,0 +1,337 @@
+---
+params:
+  title: "04_individual_analysis_rt_difference_nosignal_stoprespond"
+title: "`r stringr::str_to_title(params$title)`"
+author: "Bram B. Zandbelt"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true 
+    number_sections: true
+    depth: 4
+    df_print: paged
+    theme: readable
+    highlight: pygments
+---
+
+```{r setup, include=FALSE}
+# Set root dir to project directory to ensure that code is always run relative to the project directory, no matter if it is run using `knitr` or interactively.
+knitr::opts_knit$set(root.dir = rprojroot::find_root(rprojroot::has_file("DESCRIPTION")))
+
+# Attach tideverse package to enable access to pipe (%>%)
+require(tidyverse)
+```
+
+# Overview
+This notebook covers Analysis 2 of the pre-registration (https://osf.io/mq64z/), investigating the difference between no-signal and stop-respond RT at the individual level.
+
+# Preliminaries
+
+## Identify the project directory
+All paths in the code are relative to the project directory.
+```{r Define project directory}
+project_dir <- rprojroot::find_root(rprojroot::has_file("DESCRIPTION"))
+```
+
+## Verify existence of output directories
+```{r Define and verify existence of output directories}
+
+derivatives_dir <- file.path(project_dir,"data","derivatives")
+figures_dir <- file.path(project_dir,"data","reports","figures")
+notebook_name <- params$title
+
+irmass::verify_output_dirs(base_dirs = list(derivatives_dir, figures_dir),
+                           notebook_name = notebook_name)
+```
+
+# Read data
+
+## Tidied and criteria-checked trial data from experiment session
+
+```{r Read preprocessed trial response time data from experimental session}
+(expt_trial_rt_data <-
+  readr::read_csv(file.path(derivatives_dir, 
+                            "02_assess_task_performance_criteria", 
+                            "tidy_expt_trial_rt_data_for_analysis.csv"),
+                  col_types = irmass::get_col_types("expt_trial_rt_data")
+                  )
+  )
+```
+
+# Data cleaning and processing
+
+```{r Filter out irrelavant rows and columns}
+(cleaned_trial_level_data <- 
+   
+   expt_trial_rt_data %>%
+   
+   # Keep relevant trials only -------------------------------------------------
+ 
+   # Responses that are:
+   
+   # ... non-anticipatory
+   dplyr::filter(RT_trial > 0.150) %>%
+   
+   # ... bimanual
+   dplyr::filter(r == "RB") %>%
+   
+   # ... no-stop or stop-signal
+   dplyr::filter(trial_alt %in% c('SAS', 'SSS', 'NS')) %>%
+   
+   # Compute inverse of RT ------------------------------------------------------
+  
+   # This is the dependent variable in the analysis
+   dplyr::mutate(RT_trial_inv = 1 / RT_trial) %>%
+   
+   # Keep relevant columns only -------------------------------------------------
+   
+   dplyr::select(subjectIx, trial_alt, RT_trial, RT_trial_inv) %>%
+   
+   # Ensure that subjectIx is coded as a factor (for plotting) ------------------
+   dplyr::mutate(subjectIx = factor(subjectIx))
+ 
+)
+```
+
+## Analysis inputs
+Action-selective stopping
+```{r Define analysis inputs - action-selective stopping}
+(analysis_inputs_sas <- 
+   cleaned_trial_level_data %>% 
+   dplyr::filter(trial_alt %in% c('SAS','NS')) %>% 
+   droplevels()
+ )
+```
+
+Stimulus-selective stopping
+```{r Define analysis inputs - stimulus-selective stopping}
+(analysis_inputs_sss <- 
+   cleaned_trial_level_data %>% 
+   dplyr::filter(trial_alt %in% c('SSS','NS')) %>% 
+   droplevels()
+ )
+```
+
+# Inferential statistics
+
+## Action-selective stopping
+Prediction of $H_0$: action-selective stop-respond response times are _not_ shorter than no-stop response times
+Prediction of $H_1$: action-selective stop-respond response times are shorter than no-stop response times
+
+```{r}
+(analysis_outputs_sas <- 
+  irmass::test_srrt_vs_nsrt_idv(tibb = analysis_inputs_sas,
+                                trial_alt_levels = c('SAS','NS')
+                                )
+ )
+```
+
+## Stimulus-selective stopping
+Prediction of $H_0$: stimulus-selective stop-respond RT $\not<$ no-signal RT
+Prediction of $H_1$: stimulus-selective stop-respond RT < no-signal RT
+
+```{r}
+(analysis_outputs_sss <- 
+  irmass::test_srrt_vs_nsrt_idv(tibb = analysis_inputs_sss,
+                                trial_alt_levels = c('SSS','NS')
+                                )
+ )
+```
+  
+# Data visualization
+
+## Action-selective stopping
+```{r, out.width='100%'}
+(plt_sas <- irmass::plot_srrt_vs_nsrt_idv(trial_data = analysis_inputs_sas,
+                                          bf_data = analysis_outputs_sas,
+                                          plot_orientation = 'horizontal')
+ )
+```
+
+Figure title
+```{r Define figure title - action-selective stopping}
+plt_sas_title <- 'Response times on action-selective stop-respond trials and no-signal trials.'
+```
+
+Figure description
+```{r Define figure description - action-selective stopping}
+plt_description <- 'Each panel shows data from one participant, including (i) response time distirbutions on individual stop-respond trials and no-signal trials, displayed as violin scatter plots (each asterisk is a trial); (ii) mean response time across trials, indicated by white, filled circles; (iii) the Bayes factor quantifying the evidence for $H_0$ vs $H_1$ ($B_{01}$), indicated by the panel background color; (iv) the subject identifier, indicated by the number in the top-right corner. Panels are ordered by $B_{01}$ (descending order).'
+```
+
+## Stimulus-selective stopping
+```{r, out.width='100%'}
+(plt_sss <- irmass::plot_srrt_vs_nsrt_idv(trial_data = analysis_inputs_sss,
+                                          bf_data = analysis_outputs_sss,
+                                          plot_orientation = 'horizontal'
+                                          )
+ )
+```
+
+Figure title
+```{r Define figure title - stimulus-selective stopping}
+plt_sss_title <- 'Response times on stimulus-selective stop-respond trials and no-signal trials.'
+```
+
+# Write data
+
+## Analysis input data
+
+### Action-selective stopping
+```{r Write to disk - analysis input data action-selective stopping}
+readr::write_csv(analysis_inputs_sas,
+                 path = file.path(derivatives_dir, 
+                                  notebook_name, 
+                                  paste('analysis_inputs',
+                                        notebook_name,
+                                        'action_selective_stopping',
+                                        'rt_data.csv', 
+                                        sep = '_')
+                                  ),
+                 col_names = TRUE)
+```
+
+### Stimulus-selective stopping
+```{r Write to disk - analysis input data stimulus-selective stopping}
+readr::write_csv(analysis_inputs_sss,
+                 path = file.path(derivatives_dir, 
+                                  notebook_name, 
+                                  paste('analysis_inputs',
+                                        notebook_name,
+                                        'stimulus_selective_stopping',
+                                        'rt_data.csv', 
+                                        sep = '_')
+                                  ),
+                 col_names = TRUE)
+```
+
+
+## Analysis output data
+Bayes factors
+
+### Action-selective stopping
+```{r Write to disk - analysis output data action-selective stopping}
+readr::write_csv(analysis_outputs_sas,
+                 path = file.path(derivatives_dir, 
+                                  notebook_name, 
+                                  paste('analysis_outputs',
+                                        notebook_name,
+                                        'action_selective_stopping',
+                                        'b01.csv', 
+                                        sep = '_')
+                                  ),
+                 col_names = TRUE)
+```
+
+### Stimulus-selective stopping
+```{r Write to disk - analysis output data stimulus-selective stopping}
+readr::write_csv(analysis_outputs_sss,
+                 path = file.path(derivatives_dir, 
+                                  notebook_name, 
+                                  paste('analysis_outputs',
+                                        notebook_name,
+                                        'stimulus_selective_stopping',
+                                        'b01.csv', 
+                                        sep = '_')
+                                  ),
+                 col_names = TRUE)
+```
+
+
+## Plotting input data
+
+Consists of analysis input data and analysis output data, which are already written to disk.
+
+## Plotting output data
+Figures
+
+### Action-selective stopping
+```{r Write to disk - plot of action-selective stopping descriptive and inferential statistics}
+
+# Figure
+filename_plt_sas <- 
+  paste('plot',
+        notebook_name,
+        'action_selective_stopping.pdf',
+        sep = '_')
+
+ggplot2::ggsave(plot = plt_sas,
+                path = file.path(figures_dir, notebook_name),
+                filename = filename_plt_sas,
+                device = "pdf",
+                width = 18,
+                height = 13.5,
+                units = 'cm'
+                )
+
+# Figure caption
+irmass::write_fig_cap(
+  fig_title = plt_sas_title, 
+  fig_description = plt_description, 
+  fig_dir = figures_dir, 
+  notebook_name = notebook_name, 
+  stopping_type = "action_selective")
+```
+
+### Stimulus-selective stopping
+```{r Write to disk - plot of stimulus-selective stopping descriptive and inferential statistics}
+
+# Figure
+filename_plt_sss <- 
+  paste('plot',
+        notebook_name,
+        'stimulus_selective_stopping.pdf',
+        sep = '_')
+
+cowplot::ggsave(plot = plt_sss,
+                path = file.path(figures_dir, notebook_name),
+                filename = filename_plt_sss,
+                width = 18,
+                height = 13.5,
+                units = 'cm'
+                )
+
+# Figure caption
+irmass::write_fig_cap(
+  fig_title = plt_sss_title, 
+  fig_description = plt_description, 
+  fig_dir = figures_dir, 
+  notebook_name = notebook_name, 
+  stopping_type = "stimulus_selective")
+```
+
+# Upload data to figShare
+
+```{r Upload data to figShare - plot of action-selective stopping descriptive and inferential statistics}
+if (irmass::get_figshare_specs('do_upload')) {
+  
+  (article_id_plt_sas <- 
+    rfigshare::fs_new_article(title = plt_sas_title,
+                              description = plt_description,
+                              type = 'figure',
+                              authors = irmass::get_figshare_specs('authors'),
+                              tags = irmass::get_figshare_specs('tags'),
+                              links = irmass::get_figshare_specs('links'),
+                              files = file.path(figures_dir, notebook_name, filename_plt_sas),
+                              visibility = irmass::get_figshare_specs('visibility')
+                              )
+   )
+}
+```
+
+```{r Upload data to figShare - plot of stimulus-selective stopping descriptive and inferential statistics}
+if (irmass::get_figshare_specs('do_upload')) {
+  
+  (article_id_plt_sss <- 
+    rfigshare::fs_new_article(title = plt_sss_title,
+                              description = plt_description,
+                              type = 'figure',
+                              authors = irmass::get_figshare_specs('authors'),
+                              tags = irmass::get_figshare_specs('tags'),
+                              links = irmass::get_figshare_specs('links'),
+                              files = file.path(figures_dir, notebook_name, filename_plt_sss),
+                              visibility = irmass::get_figshare_specs('visibility')
+                              )
+   )
+}
+```

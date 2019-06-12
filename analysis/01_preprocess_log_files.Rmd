@@ -1,0 +1,275 @@
+---
+params:
+  title: "01_preprocess_log_files"
+title: "`r stringr::str_to_title(params$title)`"
+author: "Bram B. Zandbelt"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true 
+    number_sections: true
+    depth: 4
+    df_print: paged
+    theme: readable
+    highlight: pygments
+---
+
+```{r setup, include=FALSE}
+# Set root dir to project directory to ensure that code is always run relative to the project directory, no matter if it is run using `knitr` or interactively.
+knitr::opts_knit$set(root.dir = rprojroot::find_root(rprojroot::has_file("DESCRIPTION")))
+
+# Attach tideverse package to enable access to pipe (%>%)
+require(tidyverse)
+```
+
+# Overview 
+
+# Preliminaries
+
+## Identify the project directory
+All paths in the code are relative to the project directory.
+```{r Define project directory}
+project_dir <- rprojroot::find_root(rprojroot::has_file("DESCRIPTION"))
+```
+
+## Define and verify existence of output directories
+```{r Define and verify existence of output directories}
+
+derivatives_dir <- file.path(project_dir,"data","derivatives")
+figures_dir <- file.path(project_dir,"data","reports","figures")
+notebook_name <- params$title
+
+irmass::verify_output_dirs(base_dirs = list(derivatives_dir, figures_dir),
+                           notebook_name = notebook_name)
+```
+
+# Read data
+
+## Select log files
+```{r Select log files}
+prac_trial_files <- irmass::select_log_files(stage = "practice", 
+                                             filetype = "triallog")
+prac_block_files <- irmass::select_log_files(stage = "practice", 
+                                             filetype = "blocklog")
+expt_trial_files <- irmass::select_log_files(stage = "experiment", 
+                                             filetype = "triallog")
+expt_block_files <- irmass::select_log_files(stage = "experiment", 
+                                             filetype = "blocklog")
+```
+
+## Read log files
+We read the four types of log files (practice blocklog, practice triallog, experiment blocklog, experiment triallog) of all participants into a tibble using `readr::read_csv`.
+
+This results in some warnings, because the blocklog files happened to have a column with zeros and no column name. This warning can be ignored and therefore they are not explicitly shown.
+```{r Read log files, warning=FALSE, echo=FALSE}
+
+prac_sess_data <- irmass::read_log_files(prac_trial_files, data_type = "sess_data")
+prac_block_data <- irmass::read_log_files(prac_block_files, data_type = "block_data")
+prac_trial_data <- irmass::read_log_files(prac_trial_files, data_type = "trial_data")
+
+expt_sess_data <- irmass::read_log_files(expt_block_files, data_type = "sess_data")
+expt_block_data <- irmass::read_log_files(expt_block_files, data_type = "block_data")
+expt_trial_data_others <- irmass::read_log_files(expt_trial_files$others, data_type = "trial_data")
+expt_trial_data_sub00 <- irmass::read_log_files(expt_trial_files$subj00, data_type = "trial_data_sub00")
+
+```
+
+# Data cleaning and processing
+Data clearning involves the following (high-level) steps:
+- correction of erroneous columns names in the experimental triallog file from participant subj00, and merge data with data from other participants
+- remove practice trials from experimental session
+
+- do some renaming, mutating, etc.
+
+- tidy the data (see Wickham, J Stat Software, 2014)
+
+
+## Correct erroneous column names in experimental triallog file of sub-00
+During the experimental session, participant subj00 practiced the task outside the MRI scanner, using a keyboard rather than the MR-compatible response pad. As a result, this subject's experiment triallog variable names related to key presses reflect the keyboard mapping (LM = f, RM = h, LI = v, RI = b) rather than the response pad mapping (LM = f, RM = b, LI = e, RI = a). The procedure below for subj00 corrects this issue.
+
+```{r Preprocess experimental triallog file of sub-00}
+expt_trial_data_sub00 <- 
+expt_trial_data_sub00 %>%
+  dplyr::rename(keyCount_a = keyCount_b,
+                rt1_a = rt1_b,
+                keyCount_e = keyCount_v,
+                rt1_e = rt1_v,
+                keyCount_b = keyCount_h,
+                rt1_b = rt1_h,
+                `rtDiff1_f-b` = `rtDiff1_f-h`,
+                `rtDiff1_e-a` = `rtDiff1_v-b`,
+         )
+```
+
+Now, merge sub-00's experimental trial data with that from the others
+
+```{r Merge experimental trial data from sub-00 and others}
+expt_trial_data <- rbind(expt_trial_data_sub00,expt_trial_data_others)
+```
+
+## Remove practice blocks/trials data from experimental session data
+
+```{r Remove practice trials from experimental session data}
+expt_block_data <- 
+  expt_block_data %>%
+  dplyr::filter(stringr::str_detect(blockId, '^e.*'))
+
+expt_trial_data <- 
+  expt_trial_data %>%
+  dplyr::filter(stringr::str_detect(blockId, '^e.*'))
+```
+
+## Verify index columns
+Columns with column names ending in 'Ix' are index columns. The values in these columns should be of integer type, but are not when NaNs are present. The following code identifies index columns, replaces NaNs with NAs and ensures that the values are coded as integers.
+
+```{r Verify index columns}
+
+# Index columns (*Ix) should be coded as integers
+list2env(purrr::map(list(prac_sess_data = prac_sess_data, 
+                         prac_block_data = prac_block_data, 
+                         prac_trial_data = prac_trial_data, 
+                         expt_sess_data = expt_sess_data,
+                         expt_block_data = expt_block_data,
+                         expt_trial_data = expt_trial_data), 
+                    irmass::verify_ix_cols),
+         envir = parent.frame()
+         )
+
+```
+
+## Reorganize and tidy data data
+The block data is used to determine whether or not performance was in line with preset criteria.
+
+Tidy data has the following characteristics:
+
+- each variable forms one column
+- each observation forms one row
+- each type of observational unit forms a table
+
+Tidy data aids data analysis and data visualization.
+
+### Reorganize and tidy data block data
+The block data is used to assess task performance criteria.
+
+```{r Reorganize and tidy block data}
+prac_block_data_tidied <- irmass::tidy_block_data(prac_block_data, stage = 'prac')
+expt_block_data_tidied <- irmass::tidy_block_data(expt_block_data, stage = 'expt')
+```
+#### Print tidied block data for a quick peek
+
+Tidy practice block data
+```{r Print practice block data}
+prac_block_data_tidied
+```
+
+Tidy experimental block data
+```{r Print experimental block data}
+expt_block_data_tidied
+```
+
+
+### Reorganize and tidy data trial data
+
+```{r Reorganize and tidy trial data}
+prac_trial_data_tidied <- irmass::tidy_trial_data(prac_trial_data)
+expt_trial_data_tidied <- irmass::tidy_trial_data(expt_trial_data)
+
+expt_trial_data_exploratory_tidied <- irmass::tidy_trial_data(expt_trial_data, analysis_type = 'exploratory')
+
+```
+
+Tidy practice trial data - responses
+```{r Print practice trial response data}
+prac_trial_data_tidied$resp_df
+```
+
+Tidy practice trial data - response times
+```{r Print practice trial response time data}
+prac_trial_data_tidied$RT_df
+```
+
+Tidy experimental trial data - responses
+```{r Print experimental trial response data}
+expt_trial_data_tidied$resp_df
+```
+
+Tidy experimental trial data - response times
+```{r Print experimental trial response time data}
+expt_trial_data_tidied$RT_df
+```
+
+# Descriptive statistics
+
+Trial numbers in practice session
+```{r Trial numbers in practice session, rows.print=36}
+irmass::show_trial_numbers(prac_trial_data_tidied$RT_df)
+```
+
+Trial numbers in experimental session
+```{r Trial numbers in experimental session, rows.print=36}
+irmass::show_trial_numbers(expt_trial_data_tidied$RT_df)
+```
+
+# Inferential statistics
+None.
+
+# Data visualization
+None.
+
+# Write data
+
+```{r Write tidied and preprocessed block and trial data}
+
+readr::write_csv(prac_block_data_tidied,
+                 path = file.path(derivatives_dir, 
+                                  notebook_name, 
+                                  'tidy_prac_block_data.csv'),
+                 col_names = TRUE)
+
+readr::write_csv(expt_block_data_tidied,
+                 path = file.path(derivatives_dir, 
+                                  notebook_name, 
+                                  'tidy_expt_block_data.csv'),
+                 col_names = TRUE)
+
+readr::write_csv(prac_trial_data_tidied$resp_df,
+                 path = file.path(derivatives_dir, 
+                                  notebook_name, 
+                                  'tidy_prac_trial_resp_data.csv'),
+                 col_names = TRUE)
+
+readr::write_csv(prac_trial_data_tidied$RT_df,
+                 path = file.path(derivatives_dir, 
+                                  notebook_name, 
+                                  'tidy_prac_trial_rt_data.csv'),
+                 col_names = TRUE)
+
+readr::write_csv(expt_trial_data_tidied$resp_df,
+                 path = file.path(derivatives_dir, 
+                                  notebook_name, 
+                                  'tidy_expt_trial_resp_data.csv'),
+                 col_names = TRUE)
+
+readr::write_csv(expt_trial_data_tidied$RT_df,
+                 path = file.path(derivatives_dir, 
+                                  notebook_name, 
+                                  'tidy_expt_trial_rt_data.csv'),
+                 col_names = TRUE)
+
+readr::write_csv(expt_trial_data_exploratory_tidied$resp_df,
+                 path = file.path(derivatives_dir, 
+                                  notebook_name, 
+                                  'tidy_expt_trial_exploratory_resp_data.csv'),
+                 col_names = TRUE)
+
+readr::write_csv(expt_trial_data_exploratory_tidied$RT_df,
+                 path = file.path(derivatives_dir, 
+                                  notebook_name, 
+                                  'tidy_expt_trial_exploratory_rt_data.csv'),
+                 col_names = TRUE)
+          
+
+```
+
+

@@ -1,0 +1,449 @@
+---
+params:
+  title: "02_assess_task_performance_criteria"
+title: "`r stringr::str_to_title(params$title)`"
+author: "Bram B. Zandbelt"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true 
+    number_sections: true
+    depth: 4
+    df_print: paged
+    theme: readable
+    highlight: pygments
+---
+
+```{r setup, include=FALSE}
+# Set root dir to project directory to ensure that code is always run relative to the project directory, no matter if it is run using `knitr` or interactively.
+knitr::opts_knit$set(root.dir = rprojroot::find_root(rprojroot::has_file("DESCRIPTION")))
+
+# Attach tideverse package to enable access to pipe (%>%)
+require(tidyverse)
+```
+
+# Overview
+This notebook compares task performance in the practice and experimental session against the task performance exclusion criteria described in §2.3.1. (practice session) and §2.7.1. (experiment session) of the preregistration document. We identify the participants that did not meet the pre-set criteria.
+
+The following table shows the task performance criteria:
+
+Session    | Stage | Block                       | NS accuracy | NS mean RT | NS mean RT diff | SL accuracy | SR accuracy | SB accuracy | IG accuracy |
+---------- | ----- | --------------------------- | ----------- | ---------- | --------------- | ----------- | ----------- | ----------- | ----------- | 
+practice   | 1     | no-signal                   | > 85%       | < 650 ms   | < 50 ms         | -           | -           | -           | -           |
+practice   | 2     | action-selective stopping   | > 85%       | < 650 ms   | < 50 ms         | > 20%       | > 20%       | -           | -           |
+practice   | 2     | stimulus-selective stopping | > 85%       | < 650 ms   | < 50 ms         | -           | -           | > 20%       | > 80%       |
+practice   | 3     | mixed                       | > 85%       | < 650 ms   | < 50 ms         | > 20%       | > 20%       | > 20%       | > 80%       |
+experiment | -     | mixed                       | > 85%       | < 650 ms   | -               | > 20%       | > 20%       | > 20%       | > 80%       |
+
+
+The practice session consisted of three stages, each with one or two blocks. Participants received feedback at the end of each block. A block was repeated until all the block-specific specified performance criteria were met. If participants failed to meet these criteria over five consecutive attempts, the experiment was terminated and the participant was excluded for further participation.
+
+The experimental session consisted of two 'runs', each consisting of six blocks. Participants received feedback at the end of each block, but performance did not influence the course of the experiment. Data from participants was excluded from further analysis if they failed to meet the above performance criteria (i) over the entire experimental session or (ii) in five consecutive blocks .
+
+# Preliminaries
+
+## Identify the project directory
+All paths in the code are relative to the project directory.
+```{r Define project directory}
+project_dir <- rprojroot::find_root(rprojroot::has_file("DESCRIPTION"))
+```
+
+## Verify existence of output directories
+```{r Define and verify existence of output directories}
+
+derivatives_dir <- file.path(project_dir,"data","derivatives")
+figures_dir <- file.path(project_dir,"data","reports","figures")
+notebook_name <- params$title
+
+irmass::verify_output_dirs(base_dirs = list(derivatives_dir, figures_dir),
+                   notebook_name = notebook_name)
+```
+
+```{r}
+title_font_size <- 9
+subtitle_font_size <- 7
+label_font_size <- 6
+  
+notebook_plot_theme <- 
+  theme_irmass() +
+  ggplot2::theme(
+    plot.title = ggplot2::element_text(size = title_font_size),
+    axis.text = ggplot2::element_text(size = label_font_size),
+    axis.title = ggplot2::element_text(size = subtitle_font_size),
+    legend.text = ggplot2::element_text(size = label_font_size),
+    legend.title = ggplot2::element_text(size = subtitle_font_size),
+    strip.text = ggplot2::element_text(size = label_font_size))
+```
+
+
+# Read data
+
+## Read preprocessed data files
+
+### Block data from practice session
+These will be used to assess/demonstrate practice session exclusion criteria.
+```{r Read preprocessed block data from practice session}
+prac_block_data <- 
+  readr::read_csv(file.path(derivatives_dir, "01_preprocess_log_files", "tidy_prac_block_data.csv"),
+                  col_types = irmass::get_col_types("prac_block_data")
+                  ) 
+
+# %>%
+#   dplyr::mutate(block_type = factor(block_type, levels = c("NS","AS","SS","mixed")),
+#                 attempt = factor(attempt)
+#                 )
+```
+
+### Block data from experiment session
+These will be used to assess/demonstrate experimental session exclusion criteria
+
+```{r Read preprocessed block data from experimental session}
+expt_block_data <- 
+  readr::read_csv(file.path(derivatives_dir, "01_preprocess_log_files", "tidy_expt_block_data.csv"),
+                  col_types = irmass::get_col_types("expt_block_data")
+                  )
+```
+
+### Trial data from experiment session
+Data from participants who failed to meet any of the experimental session exclusion criteria will be removed (see below.
+
+```{r Read preprocessed trial data from experimental session}
+expt_trial_resp_data <-
+  readr::read_csv(file.path(derivatives_dir, "01_preprocess_log_files", "tidy_expt_trial_resp_data.csv"),
+                  col_types = irmass::get_col_types("expt_trial_resp_data")
+                  )
+
+expt_trial_rt_data <-
+  readr::read_csv(file.path(derivatives_dir, "01_preprocess_log_files", "tidy_expt_trial_rt_data.csv"),
+                  col_types = irmass::get_col_types("expt_trial_rt_data")
+                  )
+```
+
+Also read data for exploratory analysis - subjects will be excluded from these data, too
+```{r}
+expt_trial_exploratory_rt_data <- 
+  readr::read_csv(file.path(derivatives_dir, "01_preprocess_log_files", "tidy_expt_trial_exploratory_rt_data.csv"),
+                  col_types = irmass::get_col_types("expt_trial_rt_data_exploratory"))
+```
+
+
+## Inspect the block data from the practice session
+```{r Inspect the block data from the practice session}
+prac_block_data
+```
+
+## Inspect the block data from the experimental session
+```{r Inspect the block data from the experimental session}
+expt_block_data
+```
+
+## Inspect the trial response data from the experimental session
+```{r Inspect the trial response data from the experimental session}
+expt_trial_resp_data
+```
+
+## Inspect the trial response time data from the experimental session
+```{r Inspect the trial response time data from the experimental session}
+expt_trial_rt_data
+```
+
+# Data cleaning and processing
+Practice session block data only needs to be split up for visualization purposes. Experimental block data need to be further processed before data exclusion criteria can be assessed. Specifically, performance measure means need to be computed and the number of consecutive blocks on which task performance criteria are not met need to be determined.
+
+## Practice session block data - Split data based on block type
+
+### No-signal trial block (stage 1)
+```{r}
+(NS_practice_block_data <- 
+  prac_block_data %>%
+  dplyr::filter(!is.na(failed)) %>% 
+  dplyr::filter(block_type == 'NS') %>%
+  dplyr::filter(criterion %in% c('NS_accuracy','NS_mean_RT','NS_mean_RTdiff')) %>%
+  droplevels())
+```
+
+### Action-selective stopping block (stage 2)
+```{r}
+(AS_practice_block_data <- 
+  prac_block_data %>%
+  dplyr::filter(!is.na(failed)) %>% 
+  dplyr::filter(block_type == 'AS') %>%
+  dplyr::filter(criterion %in% c('NS_accuracy','NS_mean_RT','NS_mean_RTdiff',"SL_accuracy","SR_accuracy")) %>%
+  droplevels())
+```
+
+### Stimulus-selective stopping block (stage 2)
+```{r}
+(SS_practice_block_data <- 
+  prac_block_data %>%
+  dplyr::filter(!is.na(failed)) %>% 
+  dplyr::filter(block_type == 'SS') %>%
+  dplyr::filter(criterion %in% c('NS_accuracy','NS_mean_RT','NS_mean_RTdiff',"SB_accuracy","IG_accuracy")) %>%
+  droplevels())
+```
+
+### Mixed block (stage 3)
+```{r}
+(mixed_practice_block_data <- 
+  prac_block_data %>%
+  dplyr::filter(!is.na(failed)) %>% 
+  dplyr::filter(block_type == 'mixed') %>%
+  dplyr::filter(criterion %in% c('NS_accuracy','NS_mean_RT','NS_mean_RTdiff',"SL_accuracy","SR_accuracy","SB_accuracy","IG_accuracy")) %>%
+  droplevels())
+```
+
+## Experimental session block data - compute means and count consecutive failures
+```{r}
+(expt_performance_crit <- irmass::assess_expt_performance_crit(expt_block_data))
+```
+
+# Descriptive statistics
+Descriptive statistics are reported in data visualizations below.
+
+# Data visualization
+
+## Practice session
+
+### Big picture overview
+```{r Big picture overview of performance relative to performance criteria, out.width='100%', fig.asp=1}
+
+yorder = c("NS_accuracy","SL_accuracy","SR_accuracy","SB_accuracy","IG_accuracy","NS_mean_RT","NS_mean_RTdiff")
+yticklabels = c("NS_accuracy" = "no-signal accuracy",
+                "NS_mean_RT" = "no-signal mean RT",
+                "NS_mean_RTdiff" = "no-signal mean RT difference",
+                "SL_accuracy" = "stop-left accuracy",
+                "SR_accuracy" = "stop-right accuracy",
+                "SB_accuracy" = "stop-both accuracy",
+                "IG_accuracy" = "ignore accuracy"
+                )
+
+irmass::plot_overview(data = prac_block_data, 
+                      xvar = 'attempt', 
+                      xvardesc = 'attempt', 
+                      yorder = yorder,
+                      yticklabels = yticklabels,
+                      fillvar = 'failed', 
+                      fillvardesc = 'failed',
+                      facetgridvar  = c('block_type','subjectIx'),
+                      plottitle = 'Big picture overview of practice session performance relative to performance criteria')
+```
+
+### Closer look at individual task blocks of the practice session
+
+#### Stage 1 - No-signal block
+
+```{r Practice session overview of no-signal block, out.width='100%', fig.asp=1.61}
+yorder = rev(c("NS_accuracy","NS_mean_RT","NS_mean_RTdiff"))
+yticklabels = c("NS_accuracy" = "no-signal accuracy",
+                "NS_mean_RT" = "no-signal mean RT",
+                "NS_mean_RTdiff" = "no-signal mean RT difference"
+                )
+
+irmass::plot_overview(data = NS_practice_block_data, 
+                      xvar = 'attempt', 
+                      xvardesc = 'attempt', 
+                      yorder = yorder,
+                      yticklabels = yticklabels,
+                      fillvar = 'failed', 
+                      fillvardesc = 'failed', 
+                      labelvar = 'performance',
+                      facetwrapvar  = 'subjectIx',
+                      plottitle = 'Assessment of task performance exclusion criteria for practice session NS block') + notebook_plot_theme
+```
+
+#### Stage 2 - Action-selective stopping block
+```{r Practice session overview of action-selective stopping block, out.width='100%', fig.asp=1.61}
+yorder = rev(c("NS_accuracy","NS_mean_RT","NS_mean_RTdiff","SL_accuracy","SR_accuracy"))
+yticklabels = c("NS_accuracy" = "no-signal accuracy",
+                "NS_mean_RT" = "no-signal mean RT",
+                "NS_mean_RTdiff" = "no-signal mean RT difference",
+                "SL_accuracy" = "stop-left accuracy",
+                "SR_accuracy" = "stop-right accuracy"
+                )
+
+irmass::plot_overview(data = AS_practice_block_data, 
+                      xvar = 'attempt', 
+                      xvardesc = 'attempt', 
+                      yorder = yorder,
+                      yticklabels = yticklabels,
+                      fillvar = 'failed', 
+                      fillvardesc = 'failed', 
+                      labelvar = 'performance',
+                      facetwrapvar  = 'subjectIx',
+                      plottitle = 'Assessment of task performance exclusion criteria for practice session AS block') + notebook_plot_theme
+```
+
+Note that participant 4 failed to bring performance in line with requirements within five subsequent attempts at the action-selective stopping block.
+
+#### Stage 2 - Stimulus-selective stopping block
+```{r Practice session overview of stimulus-selective stopping block, out.width='100%', fig.asp=1.61}
+yorder = rev(c("NS_accuracy","NS_mean_RT","NS_mean_RTdiff","SB_accuracy","IG_accuracy"))
+yticklabels = c("NS_accuracy" = "no-signal accuracy",
+                "NS_mean_RT" = "no-signal mean RT",
+                "NS_mean_RTdiff" = "no-signal mean RT difference",
+                "SB_accuracy" = "stop-both accuracy",
+                "IG_accuracy" = "ignore accuracy"
+                )
+
+irmass::plot_overview(data = SS_practice_block_data, 
+                      xvar = 'attempt', 
+                      xvardesc = 'attempt', 
+                      yorder = yorder,
+                      yticklabels = yticklabels,
+                      fillvar = 'failed', 
+                      fillvardesc = 'failed', 
+                      labelvar = 'performance',
+                      facetwrapvar  = 'subjectIx',
+                      plottitle = 'Assessment of task performance exclusion criteria for practice session SS block') + notebook_plot_theme
+```
+
+#### Stage 3 - Mixed block
+Practice session - mixed block
+```{r Practice session overview of mixed block, out.width='100%', fig.asp=1.61}
+yorder = rev(c("NS_accuracy","SL_accuracy","SR_accuracy","SB_accuracy","IG_accuracy","NS_mean_RT","NS_mean_RTdiff"))
+yticklabels = c("NS_accuracy" = "no-signal accuracy",
+                "NS_mean_RT" = "no-signal mean RT",
+                "NS_mean_RTdiff" = "no-signal mean RT difference",
+                "SL_accuracy" = "stop-left accuracy",
+                "SR_accuracy" = "stop-right accuracy",
+                "SB_accuracy" = "stop-both accuracy",
+                "IG_accuracy" = "ignore accuracy"
+                )
+
+irmass::plot_overview(data = mixed_practice_block_data, 
+                      xvar = 'attempt', 
+                      xvardesc = 'attempt', 
+                      yorder = yorder,
+                      yticklabels = yticklabels,
+                      fillvar = 'failed', 
+                      fillvardesc = 'failed', 
+                      labelvar = 'performance',
+                      facetwrapvar  = 'subjectIx',
+                      plottitle = 'Assessment of task performance exclusion criteria for practice session mixed block') + notebook_plot_theme
+```
+
+## Experimental session
+
+
+### Big picture overview of task performance in experimental session
+
+```{r Big picture overview of task performance in the experimental session, out.width='100%', fig.asp=1.61}
+yorder = rev(c("NS_accuracy","SL_accuracy","SR_accuracy","SB_accuracy","IG_accuracy","NS_mean_RT","NS_mean_RTdiff"))
+yticklabels = c("NS_accuracy" = "no-signal accuracy",
+                "NS_mean_RT" = "no-signal mean RT",
+                "NS_mean_RTdiff" = "no-signal mean RT difference",
+                "SL_accuracy" = "stop-left accuracy",
+                "SR_accuracy" = "stop-right accuracy",
+                "SB_accuracy" = "stop-both accuracy",
+                "IG_accuracy" = "ignore accuracy"
+                )
+
+irmass::plot_overview(data = expt_block_data, 
+                      xvar = 'blockId', 
+                      xvardesc = 'blockId', 
+                      yorder = yorder,
+                      yticklabels = yticklabels,
+                      fillvar = 'failed', 
+                      fillvardesc = 'failed', 
+                      facetwrapvar  = 'subjectIx',
+                      plottitle = 'Assessment of task performance exclusion criteria for experimental session') + notebook_plot_theme
+```
+
+### Exclusion based on overall task performance
+```{r Exclusion based on overall task performance, out.width='100%', fig.asp=1.61}
+yorder = rev(c("NS_accuracy","SL_accuracy","SR_accuracy","SB_accuracy","IG_accuracy","NS_mean_RT","NS_mean_RTdiff"))
+yticklabels = c("NS_accuracy" = "no-signal accuracy",
+                "NS_mean_RT" = "no-signal mean RT",
+                "NS_mean_RTdiff" = "no-signal mean RT difference",
+                "SL_accuracy" = "stop-left accuracy",
+                "SR_accuracy" = "stop-right accuracy",
+                "SB_accuracy" = "stop-both accuracy",
+                "IG_accuracy" = "ignore accuracy"
+                )
+
+irmass::plot_overview(data = expt_performance_crit, 
+                      xvar = 'subjectIx', 
+                      xvardesc = 'subjectIx', 
+                      yorder = yorder,
+                      yticklabels = yticklabels,
+                      fillvar = 'failed_overall_crit', 
+                      fillvardesc = 'failed',
+                      labelvar = 'mean_perf_overall',
+                      plottitle = 'Assessment of overall task performance exclusion criteria for experimental session') + notebook_plot_theme
+```
+
+### Exclusion based on failure to meet task performance criteria in five consecutive blocks
+```{r Exclusion based on failure to meet task performance criteria in five consecutive blocks, out.width='100%', fig.asp=1.61}
+yorder = rev(c("NS_accuracy","SL_accuracy","SR_accuracy","SB_accuracy","IG_accuracy","NS_mean_RT","NS_mean_RTdiff"))
+yticklabels = c("NS_accuracy" = "no-signal accuracy",
+                "NS_mean_RT" = "no-signal mean RT",
+                "NS_mean_RTdiff" = "no-signal mean RT difference",
+                "SL_accuracy" = "stop-left accuracy",
+                "SR_accuracy" = "stop-right accuracy",
+                "SB_accuracy" = "stop-both accuracy",
+                "IG_accuracy" = "ignore accuracy"
+                )
+
+irmass::plot_overview(data = expt_performance_crit, 
+                      xvar = 'subjectIx', 
+                      xvardesc = 'subjectIx', 
+                      yorder = yorder,
+                      yticklabels = yticklabels,
+                      fillvar = 'failed_blockwise_crit', 
+                      fillvardesc = 'failed',
+                      labelvar = 'max_n_consec_failures',
+                      plottitle = 'Assessment of blockwise task performance exclusion criteria for experimental session') + notebook_plot_theme
+```
+
+## Identify participants in the experimental session that should be excluded
+
+```{r Identify participants in the experimental session that should be excluded, out.width='100%', fig.asp=1.61}
+(expt_performance_crit_failures <- 
+  expt_performance_crit %>%
+  dplyr::filter(failed_overall_crit == TRUE | failed_blockwise_crit == TRUE))
+
+subjects_to_exclude <- 
+  expt_performance_crit_failures %>%
+  dplyr::pull(subjectIx)
+```
+## Exclude subject's data from experimental data
+```{r Exclude subject data from experimental data, out.width='100%', fig.asp=1.61}
+
+exclude_subjects <- function(data, subj_to_exclude) {
+  data %>%
+    dplyr::filter(!subjectIx %in% subj_to_exclude)
+}
+
+expt_trial_resp_data_for_analysis <- exclude_subjects(expt_trial_resp_data, subjects_to_exclude)
+expt_trial_rt_data_for_analysis <- exclude_subjects(expt_trial_rt_data, subjects_to_exclude)
+expt_trial_exploratory_rt_data_for_analysis <- exclude_subjects(expt_trial_exploratory_rt_data, subjects_to_exclude)
+```
+
+# Inferential statistics
+
+None.
+
+# Write data
+
+```{r Write trial data that is ready for analysis}
+
+readr::write_csv(expt_trial_resp_data_for_analysis,
+                 path = file.path(derivatives_dir, 
+                                  notebook_name, 
+                                  'tidy_expt_trial_resp_data_for_analysis.csv'),
+                 col_names = TRUE)
+
+readr::write_csv(expt_trial_rt_data_for_analysis,
+                 path = file.path(derivatives_dir, 
+                                  notebook_name, 
+                                  'tidy_expt_trial_rt_data_for_analysis.csv'),
+                 col_names = TRUE)
+
+readr::write_csv(expt_trial_exploratory_rt_data_for_analysis,
+                 path = file.path(derivatives_dir, 
+                                  notebook_name, 
+                                  'tidy_expt_trial_exploratory_rt_data_for_analysis.csv'),
+                 col_names = TRUE)
+
+```
