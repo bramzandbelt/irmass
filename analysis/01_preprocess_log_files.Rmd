@@ -37,7 +37,7 @@ project_dir <- rprojroot::find_root(rprojroot::has_file("DESCRIPTION"))
 ```{r Define and verify existence of output directories}
 
 derivatives_dir <- file.path(project_dir,"data","derivatives")
-figures_dir <- file.path(project_dir,"data","reports","figures")
+figures_dir <- file.path(project_dir, "figures")
 notebook_name <- params$title
 
 irmass::verify_output_dirs(base_dirs = list(derivatives_dir, figures_dir),
