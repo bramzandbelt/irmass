@@ -11,24 +11,6 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Imports:
-    BayesFactor (>= 0.9.12-2),
-    broom (>= 0.4.2),
-    coda (>= 0.19-1),
-    compute.es,
-    cowplot (>= 0.7.0),
-    forcats (>= 0.2.0),
-    ggthemes (>= 3.4.0),
-    ggbeeswarm (>= 0.5.3),
-    knitr (>= 1.16),
-    MASS,
-    parallel,
-    rjags,
-    runjags (>= 2.0.4-2),
-    stringr (>= 1.2.0),
-    tidyverse (>= 1.2.1),
-    combinat
-Suggests: testthat,
-    knitr,
-    rmarkdown
-RoxygenNote: 6.0.1
+Suggests: 
+RoxygenNote: 6.1.1
 VignetteBuilder: knitr
