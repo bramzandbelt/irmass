@@ -1,8 +1,155 @@
+#' Compute stop-signal reactione time
+#'
+#' Stop-signal reaction time (SSRT) can be computed according to one of the
+#' following methods:
+#' - integration method of the independent race model (Logan & Cowan, Psych Rev,
+#' 1984)
+#' - mean method (Logan & Cowan, Psych Rev, 1984)
+#' - modified integration method ()
+#'
+#' Integration method ----------------------------------------------------------
+#' - Compute probability of responding given a stop-signal across delays (staircase) or for each delay separately
+#' (no staircase)
+#' - Estimate finishing time: integrate the no-signal response time distribution up to the point corresponding to the probability of responding given a stop-signal
+#' - Subtract mean delay (staircase) or delay (no staircase)
+#'
+#' Mean method -----------------------------------------------------------------
+#' - Compute probability of responding given a stop-signal across delays (staircase) or for each delay separately
+#' (no staircase)
+#' - Estimate finishing time: mean no-signal response time
+#'
+#' Modified integration method -------------------------------------------------
+#' - Compute probability of responding
+#'
+#' @export
+compute_ssrt <- function(tibb, for_each_ssd = FALSE) {
+
+  #Include input args: method, rt_col, ssd_col, accuracy_col, staircase
+
+  ssds <- unique(tibb$t_d[!is.na(tibb$t_d)])
+
+  tibb <-
+    tibb %>%
+    dplyr::mutate(trial_alt = factor(trial_alt,
+                                     levels = c("NS", "SAS", "SSS")),
+                  trial = factor(trial,
+                                 levels = c("NS", "SL", "SR", "SB", "IG")),
+                  t_d = factor(t_d,
+                               levels = ssds)
+                  )
+
+  # Compute probability of responding ------------------------------------------
+  p_respond <-
+    tibb %>%
+    # dplyr::filter(trial %in% c("SB", "IG"),
+    dplyr::filter(trial %in% c("SL", "SR", "SB"),
+                  trial_performance %in% c("SB_stop-inhibit",
+                                           "SB_stop-respond-bi",
+                                           "SL_stop-inhibit",
+                                           "SL_stop-respond-bi",
+                                           "SR_stop-inhibit",
+                                           "SR_stop-respond-bi"
+                                           )
+                  )
+  if (for_each_ssd) {
+    p_respond <-
+      p_respond %>%
+      # No staircase: we want p_respond for each trial type and delay
+      dplyr::group_by(trial_alt, t_d)
+  } else {
+    p_respond <-
+      p_respond %>%
+      # Staircase: we want p_respond for each trial type
+      dplyr::group_by(trial_alt)
+  }
+  p_respond <-
+    p_respond %>%
+    tidyr::nest() %>%
+    # Compute probability of responding given a signal for each group
+    dplyr::mutate(p_respond = purrr::pmap_dbl(.l = list(data = .$data),
+                                          .f = function(data) {
+                                            1 - mean(data$trialCorrect)
+                                            }),
+                  true_ssrt = purrr::pmap_dbl(.l = list(data = .$data),
+                                              .f = function(data) {
+                                                median(data$SSRT_true, na.rm = TRUE)
+                                              })
+                  )
+  if (for_each_ssd) {
+    p_respond <-
+      p_respond %>%
+      dplyr::mutate(t_d = as.numeric(levels(t_d))[t_d])
+
+  } else {
+    p_respond <-
+      p_respond %>%
+      # Compute mean t_d
+      dplyr::mutate(t_d = purrr::pmap_dbl(.l = list(data = .$data),
+                                          .f = function(data) {
+                                            mean(as.numeric(levels(data$t_d))[data$t_d])
+                                          }))
+    }
+
+  p_respond <-
+    p_respond %>%
+    # Keep relevant columns only
+    dplyr::select(-data)
+
+  # Estimate finishing time ----------------------------------------------------
+
+  no_signal_rt <-
+    tibb %>%
+    dplyr::filter(trial_alt == 'NS',
+                  r_bi == TRUE) %>%
+    dplyr::select(RT_trial) %>%
+    dplyr::pull()
+
+  # ignore_rt <-
+  #   tibb %>%
+  #   dplyr::filter(trial == 'IG') %>%
+  #   # dplyr::filter(trial_alt == 'NS',
+  #   #               r_bi == TRUE) %>%
+  #   dplyr::select(RT_trial) %>%
+  #   dplyr::pull()
+
+  p_respond <-
+    p_respond %>%
+    dplyr::mutate(ft = quantile(no_signal_rt, probs = p_respond, na.rm = TRUE) * 1000,
+                  ssrt = ft - t_d)
+
+
+  p_respond
+
+  # Compare with true SSRT
+  # tibb %>%
+  #   dplyr::filter(trial %in% c("SL", "SR", "SB"),
+  #                 trial_performance %in% c("SL_stop-inhibit",
+  #                                          "SR_stop-inhibit")
+  #   ) %>%
+  #   dplyr::group_by(trial_alt) %>%
+  #   dplyr::summarize(count = n(),
+  #                    median_SSRT_true = median(SSRT_true))
+
+  # tibb %>%
+  #   dplyr::filter(trial %in% c("SL", "SR", "SB"),
+  #                 trial_performance %in% c("SB_stop-inhibit",
+  #                                          "SB_stop-respond-bi",
+  #                                          "SL_stop-inhibit",
+  #                                          "SL_stop-respond-bi",
+  #                                          "SR_stop-inhibit",
+  #                                          "SR_stop-respond-bi"
+  #                                          )
+  #                 ) %>%
+  #   dplyr::group_by(trial_alt) %>%
+  #   dplyr::summarize(count = n(),
+  #                    median_SSRT_true = median(SSRT_true, na.rm = TRUE))
+}
+
 #' Derive Bayesian logistic regression predictionsgiven best-fitting parameters
 #'
 #' @param tibb Tibble containing columns subject identifier (subjectIx), best-fitting parameters (mean_beta0, mean_beta), and Bayes factor (B)
 #' @export
-derive_bayesian_logistic_regression_preds <- function(tibb) {
+derive_bayesian_logistic_regression_preds <- function(tibb, scaled_t_ds) {
 
   prd_data <-
     tibble::tibble(subjectIx = tibb$subjectIx,
@@ -14,12 +161,13 @@ derive_bayesian_logistic_regression_preds <- function(tibb) {
     # dplyr::left_join(expand.grid(subjectIx = as.character(tibb$subjectIx),
     dplyr::left_join(expand.grid(subjectIx = tibb$subjectIx,
                                  # From 0 to 750 ms seems a good range for stop-signal delays of 66, 166, 266, 366, and 466 ms
-                                 x = seq(from = 0,
-                                         to = 0.75,
-                                         by = 0.01)
+                                 x = seq(from = min(scaled_t_ds),
+                                         to = max(scaled_t_ds),
+                                         length.out = 100)
     ),
     by = 'subjectIx') %>%
-    dplyr::mutate(y = logistic(beta0 + beta * x))
+    dplyr::mutate(y = logistic(beta0 + beta * x),
+                  subjectIx = factor(subjectIx))
 
   prd_data
 
@@ -105,15 +253,82 @@ show_trial_numbers <- function(df) {
 #'
 #' Tests the independent race model's qualitative prediction that the probability of responding given a stop-signal increases as a function of stop-signal delay, in individual-level data.
 #'
-#' @param data a data frame containing the data; y variable should be coded as integers
-#' @param y_name e.g. 'r_bi'
-#' @param x_name e.g. 't_d'
-#' @param num_saved_steps number of saved steps
-#' @param thin_steps how many steps for thinning
-#' @param file_name_root base file name for output
-#' @param graph_file_type graphic output format (defaults to 'eps')
+#' @param tibb, tibble containing data on subjectIx trial_alt t_d and r_bi
+#' @param figures_dir, path to the directory for saving figures
+#' @param notebook_name, name of the notebook
+#' @param modeling_approach, whether using kruscke methods or brms to fit models
 #' @export
-test_if_idv <- function(tibb) {
+test_if_idv <- function(tibb, stopping_type, derivatives_dir, figures_dir, notebook_name, modeling_approach = 'brms') {
+
+  brms_bayesian_logistic_regression <-
+    function(df, derivatives_dir, notebook_name, tag) {
+
+      require(Rcpp)
+      require(rstan)
+
+      # Priors =====================================================================
+
+      # We use a Cauchy prior, with scaling parameter of 0.5 (see preregistration)
+      h1_prior <-
+        c(brms::set_prior("cauchy(0, 0.5)", class = 'Intercept'),
+          brms::set_prior("cauchy(0, 0.5)", class = 'b'))
+
+      # N.B. Intercept free to vary and, implicitly, b = 0
+      h0_prior <-
+        c(brms::set_prior("cauchy(0, 0.5)", class = 'Intercept'))
+
+      # H0 model ===================================================================
+
+      # Fit model
+      m_0 <-
+        brms::brm(
+          r_bi ~ 1,
+          data = df,
+          prior = h0_prior,
+          family = "bernoulli",
+          seed = 19821101,
+          sample_prior = TRUE,
+          save_all_pars = TRUE
+          # save_model = file.path(derivatives_dir, notebook_name, tag,
+          #                        "stan_model_code_p_r_bi_m_0.txt"),
+          # file = file.path(derivatives_dir, notebook_name, tag,
+          #                  "fitted_model_object_p_r_bi_m_0")
+        )
+
+      # H1 model ===================================================================
+      m_td <-
+        brms::brm(
+          r_bi ~ 1 + t_d,
+          data = df,
+          prior = h1_prior,
+          family = "bernoulli",
+          seed = 19821101,
+          sample_prior = TRUE,
+          save_all_pars = TRUE
+          # save_model = file.path(derivatives_dir, notebook_name, tag,
+          #                        "stan_model_code_p_r_bi_m_td.txt"),
+          # file = file.path(derivatives_dir, notebook_name, tag,
+          #                  "fitted_model_object_p_r_bi_m_td")
+          )
+
+      # Model comparison  ===================================================
+      # Compute the Bayes factor
+
+      BF01brms <- brms::bayes_factor(m_0, m_td, log = TRUE)$bf
+
+      # Put the relevant stats in a tibble
+      bf_sub <-
+        tibble::tibble(model = "B01",
+                       B = exp(BF01brms),
+                       logB = BF01brms,
+                       label = cut(exp(BF01brms),
+                                   breaks = get_bf_settings("breaks"),
+                                   labels = get_bf_settings("labels")),
+                       mean_beta0 = brms::fixef(m_td)["Intercept","Estimate"],
+                       mean_beta = brms::fixef(m_td)["t_d","Estimate"]
+                       )
+    }
+
 
   # Specify some functions -----------------------------------------------------
   bayesian_logistic_regression <-
@@ -162,7 +377,7 @@ test_if_idv <- function(tibb) {
     # Step 7 - # Put the relevant stats in a tibble
     df_bf_output <- tibble::tibble(model = "B01",
                                    B = BF01_savage,
-                                   log10B = log10(BF01_savage),
+                                   logB = log(BF01_savage),
                                    label = cut(BF01_savage,
                                                breaks = get_bf_settings("breaks"),
                                                labels = get_bf_settings("labels"))
@@ -176,7 +391,7 @@ test_if_idv <- function(tibb) {
     list(params = summaryInfo,
          bf = tibble::tibble(model = "B01",
                              B = BF01_savage,
-                             log10B = log10(BF01_savage),
+                             logB = log(BF01_savage),
                              label = cut(BF01_savage,
                                          breaks = get_bf_settings("breaks"),
                                          labels = get_bf_settings("labels")
@@ -190,7 +405,7 @@ test_if_idv <- function(tibb) {
     tibble::tibble(subjectIx = integer(),
                    model = character(),
                    B = double(),
-                   log10B = double(),
+                   logB = double(),
                    label = character(),
                    mean_beta0 = double(),
                    mean_beta = double()
@@ -199,44 +414,70 @@ test_if_idv <- function(tibb) {
   # Loop over participants
   for (i_subject in unique(tibb$subjectIx)) {
 
+    tag <- sprintf('%s_sub-%.02d', stopping_type, as.integer(i_subject))
+
+    # Print which subject is being processed, so that notebook output can be parsed more easily
+    print(tag)
+
     # Select data
     df_sub <-
       tibb %>%
       dplyr::filter(subjectIx == i_subject) %>%
       dplyr::select(t_d,r_bi) %>%
-      dplyr::mutate(r_bi = as.integer(r_bi),
-                    t_d = as.numeric(levels(t_d)[t_d])) %>%
       as.data.frame(.)
 
+    if (modeling_approach == "kruschke") {
 
-    # Perform Bayesian logistic regression and compute BF with Savage-Dickey density method
-    # N.B. Graphics showing diagnostics and best-fits are written to disk
-    bf_sub <-
-      bayesian_logistic_regression(df = df_sub,
-                                   y_name = 'r_bi',
-                                   x_name = 't_d',
-                                   file_name_root = file.path(figures_dir,
-                                                              notebook_name,
-                                                              sprintf('sub-%.02d',as.integer(i_subject))),
-                                   graph_file_type = 'eps')
+      # Perform Bayesian logistic regression and compute BF with Savage-Dickey density method
+      # N.B. Graphics showing diagnostics and best-fits are written to disk
+      bf_sub <-
+        bayesian_logistic_regression(df = df_sub,
+                                     y_name = 'r_bi',
+                                     x_name = 't_d',
+                                     file_name_root = file.path(figures_dir,
+                                                                notebook_name,
+                                                                tag),
+                                     graph_file_type = 'eps')
 
-    # Store descriptive and inferential statistics in data frame
-    bf_and_params <-
-      tibble::add_row(bf_and_params,
-                      subjectIx = i_subject,
-                      model = bf_sub$bf$model,
-                      B = bf_sub$bf$B,
-                      log10B = bf_sub$bf$log10B,
-                      label = bf_sub$bf$label,
-                      mean_beta0 = bf_sub$params['beta0','Mean'],
-                      mean_beta = bf_sub$params['beta','Mean']
+      # Store descriptive and inferential statistics in data frame
+      bf_and_params <-
+        tibble::add_row(bf_and_params,
+                        subjectIx = as.integer(i_subject),
+                        model = bf_sub$bf$model,
+                        B = bf_sub$bf$B,
+                        logB = bf_sub$bf$logB,
+                        label = bf_sub$bf$label,
+                        mean_beta0 = bf_sub$params['beta0','Mean'],
+                        mean_beta = bf_sub$params['beta','Mean']
+                        )
 
-      )
+    } else if (modeling_approach == "brms") {
+
+      bf_sub <-
+        brms_bayesian_logistic_regression(df = df_sub,
+                                          derivatives_dir = derivatives_dir,
+                                          notebook_name = notebook_name,
+                                          tag = tag)
+
+      bf_and_params <-
+        tibble::add_row(bf_and_params,
+                        subjectIx = as.integer(i_subject),
+                        model = bf_sub$model,
+                        B = bf_sub$B,
+                        logB = bf_sub$logB,
+                        label = bf_sub$label,
+                        mean_beta0 = bf_sub$mean_beta0,
+                        mean_beta = bf_sub$mean_beta
+                        )
+
+
+    }
 
   }
 
   # Output
-  bf_and_params
+  bf_and_params %>%
+    dplyr::mutate(subjectIx = factor(subjectIx))
 
 }
 
@@ -245,31 +486,93 @@ test_if_idv <- function(tibb) {
 #' Tests the independent race model's qualitative prediction that the probability of responding given a stop-signal increases as a function of stop-signal delay, in group-level data.
 #' @param tibb tibble containing subject-level data, including Bayesian logistic regression parameter estimates
 #' @param par_name name of the parameter containing the estimate of the logistic regression slope
-test_if_grp <- function(tibb, par_name) {
+#' @export
+test_if_grp <- function(tibb, stopping_type, derivatives_dir, figures_dir, notebook_name) {
 
   df <-
     tibb %>%
     as.data.frame()
 
-  B_data <-
-    BayesFactor::ttestBF(x = df[[par_name]],
-                         # The independent race model predicts a positive slope
-                         nullInterval = c(0, Inf),
-                         rscale = irmass::get_bf_settings('rscale')
-                         )
-  B10 <- exp(B_data@bayesFactor$bf[1])
-  B01 <- 1 / B10
+  save_diagnostic_plots <- function(mdl, mdl_name) {
 
-  tibble::tibble(
-    model = "B01",
-    B = B01,
-    log10B = log10(B01),
-    error = B_data@bayesFactor$error[1],
-    label = cut(B01,
-                breaks = get_bf_settings('breaks'),
-                labels = get_bf_settings('labels')
-                )
+    mcmc_diagnostics_m0 <- irmass::plot_mcmc_analysis(mdl)
+    posterior_m0 <- irmass::plot_posterior(mdl)
+    ggplot2::ggsave(filename = sprintf("traceplot_%s_%s.pdf", stopping_type, mdl_name),
+                    path = file.path(derivatives_dir, notebook_name),
+                    plot = mcmc_diagnostics_m0[[1]])
+
+    ggplot2::ggsave(filename = sprintf("Rhat_%s_%s.pdf", stopping_type, mdl_name),
+                    path = file.path(derivatives_dir, notebook_name),
+                    plot = mcmc_diagnostics_m0[[2]])
+
+    ggplot2::ggsave(filename = sprintf("Rhat_%s_%s.pdf", stopping_type, mdl_name),
+                    path = file.path(derivatives_dir, notebook_name),
+                    plot = posterior_m0)
+  }
+
+
+  # Specify priors -------------------------------------------------------------
+  # We use a Cauchy prior, with scaling parameter of 0.5 (see preregistration)
+  model_priors <-
+    c(brms::set_prior("cauchy(0, 0.5)", class = 'Intercept'),
+      brms::set_prior("cauchy(0, 0.5)", class = 'b'))
+
+
+  # Fit null model -------------------------------------------------------------
+  m_0 <-
+    brms::brm(
+      resp ~ (1 + subjectIx),
+      data = df,
+      prior = model_priors,
+      family = "bernoulli",
+      seed = 19821101,
+      sample_prior = TRUE,
+      save_all_pars = TRUE
     )
+
+  # Save plots: traces, Rhat, and posterior
+  save_diagnostic_plots(mdl = m_0, mdl_name = "m_0")
+
+  # Fit t_d model --------------------------------------------------------------
+  m_td <-
+    brms::brm(
+      resp ~ t_d + (1 + subjectIx),
+      data = df,
+      prior = model_priors,
+      family = "bernoulli",
+      seed = 19821101,
+      sample_prior = TRUE,
+      save_all_pars = TRUE
+    )
+
+  # Save plots: traces, Rhat, and posterior
+  save_diagnostic_plots(mdl = m_td, mdl_name = "m_td")
+
+  # Model comparison  ----------------------------------------------------------
+  BF01 <- brms::bayes_factor(m_0, m_td, log = TRUE)$bf
+
+  # Make a tibble for storing descriptive and inferential statistics -----------
+  bf_and_params <-
+    tibble::tibble(model = character(),
+                   B = double(),
+                   logB = double(),
+                   label = character(),
+                   mean_beta0 = double(),
+                   mean_beta = double()
+    )
+
+  bf_and_params <-
+    tibble::add_row(bf_and_params,
+                    model = "B01",
+                    B = exp(BF01),
+                    logB = BF01,
+                    label = cut(exp(BF01),
+                                breaks = get_bf_settings("breaks"),
+                                labels = get_bf_settings("labels")),
+                    mean_beta0 = brms::fixef(m_td)["Intercept","Estimate"],
+                    mean_beta = brms::fixef(m_td)["t_d","Estimate"]
+                    )
+
 }
 
 #' Test of stop-respond RT vs. no-signal RT for individual-level data
@@ -323,14 +626,14 @@ test_srrt_vs_nsrt_idv <- function(tibb, trial_alt_levels, rscale = get_bf_settin
     B01_data <- purrr::map(B10_data, ~1/.[1])
 
     # Note that Bayes Factors are stored as log BF, so we need to take exponential
-    B01 <- B01_data %>% purrr::map_dbl(~.@bayesFactor$bf) %>% exp()
+    B01 <- B01_data %>% purrr::map_dbl(~.@bayesFactor$bf) %>% base::exp(.)
 
     # Put the relevant stats in a tibble
     tibble::tibble(
       subjectIx = factor(as.integer(names(B10_data))),
       model = "B01",
       B = B01,
-      log10B = log10(B01),
+      logB = log(B01),
       # B_rank = dplyr::min_rank(B01),
       error = B01_data %>% purrr::map_dbl(~.@bayesFactor$error),
       label = cut(B01,
@@ -377,7 +680,7 @@ test_srrt_vs_nsrt_grp <- function(data, sr, ns) {
   tibble::tibble(
     model = "B01",
     B = B01,
-    log10B = log10(B01),
+    logB = log(B01),
     error = B01_data@bayesFactor$error,
     label = cut(B01,
                 breaks = get_bf_settings('breaks'),
@@ -492,7 +795,7 @@ test_effect_ssd_on_srrt_grp <- function(df) {
   bf_output <- tibble::tibble(mdl_class = character(),
                               mdl = character(),
                               B = numeric(),
-                              log10_B = numeric(),
+                              logB = numeric(),
                               error = numeric(),
                               label = character()
                               )
@@ -525,7 +828,7 @@ test_effect_ssd_on_srrt_grp <- function(df) {
                                  mdl_class = "null_vs_full",
                                  mdl = mdl,
                                  B = 1 / exp(B_full_vs_null[mdl]@bayesFactor$bf),
-                                 log10_B = log10(1 / exp(B_full_vs_null[mdl]@bayesFactor$bf)),
+                                 logB = log(1 / exp(B_full_vs_null[mdl]@bayesFactor$bf)),
                                  error = B_full_vs_null[mdl]@bayesFactor$error,
                                  label = cut(1 / exp(B_full_vs_null[mdl]@bayesFactor$bf),
                                              breaks = get_bf_settings('breaks'),
@@ -587,7 +890,7 @@ test_effect_ssd_on_srrt_grp <- function(df) {
                                      mdl_class = "null_vs_order_restricted",
                                      mdl = mdl,
                                      B = B_null_vs_order_restricted,
-                                     log10_B = log10(B_null_vs_order_restricted),
+                                     logB = log(B_null_vs_order_restricted),
                                      error = NA,
                                      label = cut(B_null_vs_order_restricted,
                                                  breaks = get_bf_settings('breaks'),
