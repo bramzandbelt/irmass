@@ -5,3 +5,4 @@ inst/doc
 man/*.Rd
 .RData
 .Rhistory
+*.html
