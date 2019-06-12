@@ -28,7 +28,7 @@ get_figshare_specs <- function(spec, article_id) {
                           388, # Cognitive Science not elsewhere classified
                           389  # Psychology and Cognitive Sciences not elsewhere classified
            ),
-           do_upload = TRUE, # Whether or not to upload data to figshare
+           do_upload = FALSE, # Whether or not to upload data to figshare
            links = list('https://osf.io/mq64z/' # Pre-registration document
                         ),
            tags = c('executive function',
@@ -55,6 +55,21 @@ get_figshare_specs <- function(spec, article_id) {
     }
 }
 
+# ==============================================================================
+
+#' Check whether directories exists, and create recursively if they don't
+#'
+#' @param all_dirs Character vector of directory paths to check
+#' @export
+check_dir <- function(all_dirs){
+
+  for (this_dir in all_dirs) {
+    if (!dir.exists(this_dir)) {
+      dir.create(this_dir, recursive = TRUE)
+    }
+  }
+
+}
 
 #' Checks if directories for notebook output exists, and if not creates them
 #'
@@ -80,7 +95,7 @@ verify_output_dirs <- function(base_dirs, notebook_name) {
 
 # ==============================================================================
 
-#' Selects performance log files from sourcedata directory
+#' Selects performance log files from raw data directory
 #'
 #' Selection of performance log files based on stage ("practice", "experiment") and file type ("trial", "block").
 #'
@@ -97,7 +112,7 @@ select_log_files <- function(stage = "experiment", filetype = "triallog") {
     files_subj00 <-
       Sys.glob(file.path(project_dir,
                          "data",
-                         "sourcedata",
+                         "raw",
                          "*",
                          "performance",
                          stage,
@@ -110,7 +125,7 @@ select_log_files <- function(stage = "experiment", filetype = "triallog") {
     files_others <-
       Sys.glob(file.path(project_dir,
                          "data",
-                         "sourcedata",
+                         "raw",
                          "*",
                          "performance",
                          stage,
@@ -123,7 +138,7 @@ select_log_files <- function(stage = "experiment", filetype = "triallog") {
   } else {
     Sys.glob(file.path(project_dir,
                        "data",
-                       "sourcedata",
+                       "raw",
                        "*",
                        "performance",
                        stage,
