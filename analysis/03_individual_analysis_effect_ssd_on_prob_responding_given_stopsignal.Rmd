@@ -1,7 +1,7 @@
 ---
 params:
   title: "03_individual_analysis_effect_ssd_on_prob_responding_given_stopsignal"
-title: "`r stringr::str_to_title(params$title)`"
+title: '`r stringr::str_replace_all(params$title, pattern = "_", replacement = " ")`'
 author: "Bram B. Zandbelt"
 date: "`r format(Sys.Date(), '%B %d, %Y')`"
 output:
