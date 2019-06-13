@@ -42,7 +42,7 @@ TBA
 
 ## Overview of contents
 
-The packagae `irmass` is one of two research compendia of the research project _Cognitive and Neurobiological Mechanisms of Selective Stopping_ by Bram Zandbelt and Ruben van den Bosch (the other research compendium, `cnmss`, can be found [here](github.com/bramzandbelt/cnmss)<!-- TODO: Check Github URL -->). This project was conducted at the Donders Institute, Radboud University, Nijmegen, the Netherlands, and registered at the Donders Centre for Cognitive Neuroimaging under project number 3017051.01 (DCCN PI: Roshan Cools).
+The packagae `irmass` is one of two research compendia of the research project _Cognitive and Neurobiological Mechanisms of Selective Stopping_ by Bram Zandbelt and Ruben van den Bosch (the other research compendium, `cnmss`, can be found [here](github.com/bramzandbelt/cnmss)<!-- TODO: Check Github URL -->). This project was conducted at the Donders Institute, Radboud University, Nijmegen, the Netherlands, and registered at the Donders Centre for Cognitive Neuroimaging under project number 3017031.05 (DCCN PI: Roshan Cools).
 
 This research compendium contains all data, code, and text associated with the above-mentioned publication and is organized as follows:
 
