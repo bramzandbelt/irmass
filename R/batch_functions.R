@@ -43,9 +43,7 @@ render_notebook <- function(notebook_file, notebook_dir = "analysis", reports_di
     ),
     error = function(e) {
       message(e)
-      message(sprintf("Failed to render notebook for participant %d.",
-                      run_params$participant_id)
-      )
+      message("Failed to render notebook")
 
     }
     )
