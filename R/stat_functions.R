@@ -257,8 +257,9 @@ show_trial_numbers <- function(df) {
 #' @param figures_dir, path to the directory for saving figures
 #' @param notebook_name, name of the notebook
 #' @param modeling_approach, whether using kruscke methods or brms to fit models
+#' @param rscale, width of the prior (in standardized effect size units)
 #' @export
-test_if_idv <- function(tibb, stopping_type, derivatives_dir, figures_dir, notebook_name, modeling_approach = 'brms') {
+test_if_idv <- function(tibb, stopping_type, derivatives_dir, figures_dir, notebook_name, modeling_approach = 'brms', rscale = 0.5) {
 
   brms_bayesian_logistic_regression <-
     function(df, derivatives_dir, notebook_name, tag) {
@@ -270,12 +271,12 @@ test_if_idv <- function(tibb, stopping_type, derivatives_dir, figures_dir, noteb
 
       # We use a Cauchy prior, with scaling parameter of 0.5 (see preregistration)
       h1_prior <-
-        c(brms::set_prior("cauchy(0, 0.5)", class = 'Intercept'),
-          brms::set_prior("cauchy(0, 0.5)", class = 'b'))
+        c(brms::set_prior(sprintf("cauchy(0, %f)", rscale), class = 'Intercept'),
+          brms::set_prior(sprintf("cauchy(0, %f)", rscale), class = 'b'))
 
       # N.B. Intercept free to vary and, implicitly, b = 0
       h0_prior <-
-        c(brms::set_prior("cauchy(0, 0.5)", class = 'Intercept'))
+        c(brms::set_prior(sprintf("cauchy(0, %f)", rscale), class = 'Intercept'))
 
       # H0 model ===================================================================
 
