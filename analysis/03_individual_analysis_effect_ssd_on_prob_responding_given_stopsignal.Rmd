@@ -224,7 +224,7 @@ plt_sas_title <- 'Probability of responding bimanually given an action-selective
 
 Figure description
 ```{r Define figure description}
-plt_description <- 'Each panel shows data from one participant, including (i) the observed response probability as a function of stop-signal delay, indicated by open circles; (ii) the predicted response probability as a function of stop-signal delay, indicated by a black, solid line; (iii) the Bayes factor quantifying the evidence for $H_0$ vs $H_1$ ($B_{01}$), indicated by the number in the bottom-right corner of each panel as well as the panel background color; (iv) the subject identifier, indicated by the number above each panel. Panels are ordered by $B_{01}$ (descending order).'
+plt_description <- 'Each panel shows data from one participant, including (i) the observed response probability as a function of stop-signal delay, indicated by open circles; (ii) the predicted response probability as a function of stop-signal delay, indicated by a black, solid line; (iii) the Bayes factor quantifying the evidence for $H_0$ vs $H_1$ ($B_{01}$), indicated by the panel background color; (iv) the subject identifier, indicated by the number in the bottom-right corner. Panels are ordered by $B_{01}$ (descending order).'
 ```
 
 ## Stimulus-selective stopping

@@ -147,6 +147,20 @@ Prediction of $H_1$: stimulus-selective stop-respond RT < no-signal RT
                                           bf_data = analysis_outputs_sas,
                                           plot_orientation = 'horizontal')
  )
+
+
+
+```
+```{r}
+plt_sas + 
+  ggplot2::geom_text(mapping = ggplot2::aes(label = subjectIx),
+                     x = 1,
+                     y = Inf,
+                     hjust = 1,
+                     vjust = 1,
+                     size = 2.5,
+                     fontface = "plain"
+                     )
 ```
 
 Figure title
@@ -156,7 +170,7 @@ plt_sas_title <- 'Response times on action-selective stop-respond trials and no-
 
 Figure description
 ```{r Define figure description - action-selective stopping}
-plt_description <- 'Each panel shows data from one participant, including (i) response time distirbutions on individual stop-respond trials and no-signal trials, displayed as violin scatter plots (each asterisk is a trial); (ii) mean response time across trials, indicated by white, filled circles; (iii) the Bayes factor quantifying the evidence for $H_0$ vs $H_1$ ($B_{01}$), indicated by the panel background color; (iv) the subject identifier, indicated by the number in the top-right corner. Panels are ordered by $B_{01}$ (descending order).'
+plt_description <- 'Each panel shows data from one participant, including (i) response time distirbutions on individual stop-respond trials and no-signal trials, displayed as violin scatter plots (each asterisk is a trial); (ii) mean response time across trials, indicated by white, filled circles; (iii) the Bayes factor quantifying the evidence for $H_0$ vs $H_1$ ($B_{01}$), indicated by the panel background color; (iv) the subject identifier, indicated by the number in the bottom-right corner. Panels are ordered by $B_{01}$ (descending order).'
 ```
 
 ## Stimulus-selective stopping

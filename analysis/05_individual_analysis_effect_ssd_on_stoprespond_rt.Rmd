@@ -207,7 +207,7 @@ plt_sas_title <- 'Response times on action-selective stop-respond trials as a fu
 
 Figure description
 ```{r Define figure description - action-selective stopping}
-plt_description <- 'Each panel shows data from one participant, including (i) response times - indicated by asterisks, in a shape representing their distribution (wider means more data) - on individual stop-respond trials with short delays (66, 166 or 266 ms), intermediate delays (366 ms), or long delays (466); (ii) mean response time across stop-respond trials, indicated by a white dash; (iii) the Bayes factor quantifying the evidence for $H_0$ vs $H_1$ ($B_{01}$) from a order-restricted hypothesis test, indicated by the panel background color; (iv) the subject identifier, indicated by the number in the top-right corner. Panels are ordered by $B_{01}$ (descending order).'
+plt_description <- 'Each panel shows data from one participant, including (i) response times - indicated by asterisks, in a shape representing their distribution (wider means more data) - on individual stop-respond trials with short delays (66, 166 or 266 ms), intermediate delays (366 ms), or long delays (466); (ii) mean response time across stop-respond trials, indicated by a white dash; (iii) the Bayes factor quantifying the evidence for $H_0$ vs $H_1$ ($B_{01}$) from a order-restricted hypothesis test, indicated by the panel background color; (iv) the subject identifier, indicated by the number in the bottom-right corner. Panels are ordered by $B_{01}$ (descending order).'
 ```
 
 ## Stimulus-selective stopping

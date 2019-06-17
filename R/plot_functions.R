@@ -341,7 +341,7 @@ plot_idv_rt_data_bf <- function(trial_data, bf_data, summary_data, colorbar, xva
       plt <-
         plt +
         ggplot2::geom_text(mapping = ggplot2::aes(label = subjectIx),
-                           x = Inf,
+                           x = 1,
                            y = Inf,
                            hjust = 1,
                            vjust = 1,
@@ -535,9 +535,9 @@ plot_if_idv <- function(obs_data, prd_data, bf_data, colorbar, yvar, bvar) {
                        ) +
     ggplot2::geom_text(mapping = ggplot2::aes(label = subjectIx),
                        x = Inf,
-                       y = Inf,
+                       y = 0,
                        hjust = 1,
-                       vjust = 1,
+                       vjust = 0,
                        size = 2.5,
                        fontface = "plain"
                        )
@@ -574,8 +574,9 @@ plot_if_idv <- function(obs_data, prd_data, bf_data, colorbar, yvar, bvar) {
     ) +
 
     ggplot2::scale_x_continuous(name = 'Stop-signal delay (s)',
-                                breaks = sort(unique(obs_data$t_d))[c(1,3,5)],
-                                labels = c("0.066", "0.266", "0.466")
+                                breaks = sort(unique(obs_data$t_d))[c(2,4)],
+                                labels = c("0.166", "0.366"),
+                                limits = c(0,0.5)
                                 ) +
 
     ggplot2::scale_y_continuous(name = 'P(bimanual response | stop-signal)',
