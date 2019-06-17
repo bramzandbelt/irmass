@@ -53,7 +53,7 @@ irmass::verify_output_dirs(base_dirs = list(derivatives_dir, figures_dir),
 
 ## Modeling approach
 
-```{r Modeling approacg}
+```{r Modeling approach}
 # Initially, we implemented this analysis based on John Kruschke's code (model_approach = 'kruschke') for Bayesian logistic regression (MCMC implemented via JAGS, normal priors, and Bayes Factors computed using Savage-Dickey method), later we used brms (model_approach = 'brms') for compatibility with analyses of group-level effects (MCMC implemented via Stan, Cauchy priors, and Bayes Factors computed using bridge-sampling). Both options are possible. Note that in the Kruschke approach, we use normal rather than Cauchy prior, because Cauchy priors are hard to sample and sampling from the prior is required for Savage-Dickey method (see https://rpubs.com/lindeloev/bayes_factors and https://twitter.com/paulbuerkner/status/963585470482604033)
 
 model_approach <- "brms"
