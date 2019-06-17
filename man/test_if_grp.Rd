@@ -4,7 +4,8 @@
 \alias{test_if_grp}
 \title{Test of inhibition function for group-level data}
 \usage{
-test_if_grp(tibb, par_name)
+test_if_grp(tibb, stopping_type, derivatives_dir, figures_dir,
+  notebook_name)
 }
 \arguments{
 \item{tibb}{tibble containing subject-level data, including Bayesian logistic regression parameter estimates}

@@ -4,7 +4,7 @@
 \alias{derive_bayesian_logistic_regression_preds}
 \title{Derive Bayesian logistic regression predictionsgiven best-fitting parameters}
 \usage{
-derive_bayesian_logistic_regression_preds(tibb)
+derive_bayesian_logistic_regression_preds(tibb, scaled_t_ds)
 }
 \arguments{
 \item{tibb}{Tibble containing columns subject identifier (subjectIx), best-fitting parameters (mean_beta0, mean_beta), and Bayes factor (B)}

@@ -4,7 +4,8 @@
 \alias{plot_srrt_vs_nsrt_idv}
 \title{Plot stop-respond RT vs. no-signal RT for individual-level data}
 \usage{
-plot_srrt_vs_nsrt_idv(trial_data, bf_data)
+plot_srrt_vs_nsrt_idv(trial_data, bf_data, plot_orientation = "vertical",
+  bf_as_background = TRUE)
 }
 \arguments{
 \item{trial_data}{tibble containing trial-level data}

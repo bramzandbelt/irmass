@@ -4,7 +4,7 @@
 \alias{test_effect_ssd_on_srrt_idv}
 \title{Test of stop-respond RT vs. stop-signal delay for individual-level data}
 \usage{
-test_effect_ssd_on_srrt_idv(tibb)
+test_effect_ssd_on_srrt_idv(tibb, rscale = get_bf_settings("rscale"))
 }
 \arguments{
 \item{tibb}{a tibble containing the data for the analysis}

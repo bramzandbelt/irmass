@@ -4,8 +4,8 @@
 \alias{plot_overview}
 \title{Plots task performance overview, for assessment of performance criteria}
 \usage{
-plot_overview(data, xvar, xvardesc, yorder, yticklabels, fillvar, fillvardesc,
-  labelvar, facetwrapvar, facetgridvar, plottitle)
+plot_overview(data, xvar, xvardesc, yorder, yticklabels, fillvar,
+  fillvardesc, labelvar, facetwrapvar, facetgridvar, plottitle)
 }
 \arguments{
 \item{data}{tibble containing data}

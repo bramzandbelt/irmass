@@ -4,7 +4,8 @@
 \alias{plot_srrt_vs_ssd_idv}
 \title{Plot stop-respond RT vs. stop-signal delay for individual-level data}
 \usage{
-plot_srrt_vs_ssd_idv(trial_data, bf_data)
+plot_srrt_vs_ssd_idv(trial_data, bf_data, plot_orientation = "vertical",
+  bf_as_background = TRUE)
 }
 \description{
 Plot stop-respond RT vs. stop-signal delay for individual-level data

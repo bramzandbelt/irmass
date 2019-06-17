@@ -4,22 +4,19 @@
 \alias{test_if_idv}
 \title{Test of inhibition function for individual-level data}
 \usage{
-test_if_idv(tibb)
+test_if_idv(tibb, stopping_type, derivatives_dir, figures_dir,
+  notebook_name, modeling_approach = "brms", rscale = 0.5)
 }
 \arguments{
-\item{data}{a data frame containing the data; y variable should be coded as integers}
+\item{tibb, }{tibble containing data on subjectIx trial_alt t_d and r_bi}
 
-\item{y_name}{e.g. 'r_bi'}
+\item{figures_dir, }{path to the directory for saving figures}
 
-\item{x_name}{e.g. 't_d'}
+\item{notebook_name, }{name of the notebook}
 
-\item{num_saved_steps}{number of saved steps}
+\item{modeling_approach, }{whether using kruscke methods or brms to fit models}
 
-\item{thin_steps}{how many steps for thinning}
-
-\item{file_name_root}{base file name for output}
-
-\item{graph_file_type}{graphic output format (defaults to 'eps')}
+\item{rscale, }{width of the prior (in standardized effect size units)}
 }
 \description{
 Tests the independent race model's qualitative prediction that the probability of responding given a stop-signal increases as a function of stop-signal delay, in individual-level data.

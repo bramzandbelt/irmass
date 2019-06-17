@@ -4,9 +4,17 @@
 \alias{tidy_trial_data}
 \title{Tidy trial data}
 \usage{
-tidy_trial_data(df)
+tidy_trial_data(df, analysis_type = "confirmatory")
+}
+\arguments{
+\item{df}{Data frame with minimally processed trial data}
+
+\item{analysis_type}{Analysis type: 'confirmatory' or 'exploratory'}
 }
 \description{
 Tidying involves the following steps
 - renaming and computing variables in line with preregistration
+}
+\details{
+For confirmatory analyses, only the necessary variables are returned. For exploratory analysis, all variables are returned.
 }

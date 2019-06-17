@@ -4,7 +4,8 @@
 \alias{test_srrt_vs_nsrt_idv}
 \title{Test of stop-respond RT vs. no-signal RT for individual-level data}
 \usage{
-test_srrt_vs_nsrt_idv(tibb, trial_alt_levels)
+test_srrt_vs_nsrt_idv(tibb, trial_alt_levels,
+  rscale = get_bf_settings("rscale"))
 }
 \arguments{
 \item{tibb}{tibble with trial-level data}

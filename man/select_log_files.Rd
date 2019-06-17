@@ -12,7 +12,7 @@ select_log_files(stage = "experiment", filetype = "triallog")
 \item{filetype}{File type: triallog or blocklog}
 }
 \description{
-Selects performance log files from sourcedata directory
+Selects performance log files from raw data directory
 }
 \details{
 Selection of performance log files based on stage ("practice", "experiment") and file type ("trial", "block").
