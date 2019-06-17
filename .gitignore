@@ -2,7 +2,6 @@ packrat/lib*/
 .Rproj.user
 inst/doc
 .httr-oauth
-man/*.Rd
 .RData
 .Rhistory
 *.html
