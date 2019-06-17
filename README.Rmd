@@ -63,8 +63,15 @@ The `analysis/` directory contains:
 
 The `data/` directory contains:
 
-- the raw performance data (`raw/` directory);
+- the raw performance data (`raw/` directory), organized by subject index;
+    - the performance data from the experiment session (`experiment/` directory):
+        - `triallog_*.csv` contains the raw trial-by-trial data (see codebook in `documents/content/codebook_triallog.csv`)
+        - `blocklog_*.csv` contains the block-by-block summary statistics of performance data (see codebook in `documents/content/codebook_blocklog.csv`)
+        - `runtimeinfo_*.csv` contains runtime from PsychoPy (see [https://www.psychopy.org/api/info.html](https://www.psychopy.org/api/info.html))
+    - the performance data from the practice session (`practice/` directory):
+        - contains files in same format as under `experiment/`
 - the data derived from the raw data (`derivatives/` directory), organized by notebook name.
+    - for meaning of output variables, see notebook templates (`analysis/*.Rmd`) and static reports (`reports/`)
 
 The `documents/` directory contains:
 
