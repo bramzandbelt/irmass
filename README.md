@@ -1,5 +1,5 @@
 <!-- README.md is generated from README.Rmd. Please edit that file -->
-[![Last-changedate](https://img.shields.io/badge/last%20change-2019--06--12-brightgreen.svg)](https://github.com/bramzandbelt/irmass/commits/master) [![minimal R version](https://img.shields.io/badge/R%3E%3D-3.6.0-brightgreen.svg)](https://cran.r-project.org/) [![Task DOI](https://zenodo.org/badge/49258308.svg)](https://zenodo.org/badge/latestdoi/49258308) [![Licence](https://img.shields.io/github/license/mashape/apistatus.svg)](http://choosealicense.com/licenses/mit/) [![ORCiD](https://img.shields.io/badge/ORCiD-0000--0002--6491--1247-green.svg)](https://orcid.org/0000-0002-6491-1247)
+[![Last-changedate](https://img.shields.io/badge/last%20change-2019--06--19-brightgreen.svg)](https://github.com/bramzandbelt/irmass/commits/master) [![minimal R version](https://img.shields.io/badge/R%3E%3D-3.6.0-brightgreen.svg)](https://cran.r-project.org/) [![Task DOI](https://zenodo.org/badge/49258308.svg)](https://zenodo.org/badge/latestdoi/49258308) [![Licence](https://img.shields.io/github/license/mashape/apistatus.svg)](http://choosealicense.com/licenses/mit/) [![ORCiD](https://img.shields.io/badge/ORCiD-0000--0002--6491--1247-green.svg)](https://orcid.org/0000-0002-6491-1247)
 
 irmass - Research compendium for the report on independent race model analysis of selective stopping by Zandbelt & Van den Bosch
 ================================================================================================================================
@@ -28,33 +28,74 @@ TBA
 Overview of contents
 --------------------
 
-The packagae `irmass` is one of two research compendia of the research project *Cognitive and Neurobiological Mechanisms of Selective Stopping* by Bram Zandbelt and Ruben van den Bosch (the other research compendium, `cnmss`, can be found [here](github.com/bramzandbelt/cnmss)<!-- TODO: Check Github URL -->). This project was conducted at the Donders Institute, Radboud University, Nijmegen, the Netherlands, and registered at the Donders Centre for Cognitive Neuroimaging under project number 3017051.01 (DCCN PI: Roshan Cools).
+The packagae `irmass` is one of two research compendia of the research project *Cognitive and Neurobiological Mechanisms of Selective Stopping* by Bram Zandbelt and Ruben van den Bosch (the other research compendium, `cnmss`, can be found [here](github.com/bramzandbelt/cnmss)<!-- TODO: Check Github URL -->). This project was conducted at the Donders Institute, Radboud University, Nijmegen, the Netherlands, and registered at the Donders Centre for Cognitive Neuroimaging under project number 3017031.05 (DCCN PI: Roshan Cools).
 
-This research compendium contains all data, code, and text associated with the above-mentioned publication and is organized as follows:
+This research compendium contains all data, code, and text associated with the above-mentioned publication and is organized as follows (showing directories in a tree-like format with a maximum depth of two levels):
 
-<!-- TODO: Add directory tree
-```
+    .
+    ├── MATLAB
+    ├── R
+    ├── analysis
+    │   ├── bash
+    │   └── notebooks_and_scripts
+    ├── data
+    │   ├── derivatives
+    │   ├── raw
+    │   └── simulations
+    ├── documents
+    │   ├── content
+    │   ├── context
+    │   └── manuscript
+    ├── figures
+    │   ├── 01_preprocess_log_files
+    │   ├── 02_assess_task_performance_criteria
+    │   ├── 03_individual_analysis_effect_ssd_on_prob_responding_given_stopsignal
+    │   ├── 04_individual_analysis_rt_difference_nosignal_stoprespond
+    │   ├── 05_individual_analysis_effect_ssd_on_stoprespond_rt
+    │   ├── 07_group_analysis_rt_difference_nosignal_stoprespond
+    │   ├── 08_group_analysis_effect_ssd_on_stoprespond_rt
+    │   ├── 09_exploration_support_for_hypotheses_under_different_bayes_factor_criteria
+    │   ├── 10_exploration_support_for_hypotheses_under_different_priors
+    │   └── 11_analysis_of_simulated_race_model_data
+    ├── man
+    ├── opt
+    ├── packrat
+    │   ├── lib
+    │   ├── lib-R
+    │   ├── lib-ext
+    │   └── src
+    └── reports
 
-```
--->
+The `MATLAB/` directory contains:
+
+-   MATLAB code specific to the present project; specifically, for simulating the impact of race model violations on SSRT.
+
 The `R/` directory contains:
 
--   R code specific to the present project; functions are organized into files (e.g. functions for plotting are in `plot_functions.R`)
+-   R code specific to the present project; functions are organized into files (e.g. functions for plotting are in `plot_functions.R`).
 
 The `analysis/` directory contains:
 
--   R Markdown notebooks implementing the analyses (`notebook_templates/` directory), numbered in the order in which they should be run;
+-   R Markdown notebooks implementing the analyses (`notebooks_and_scripts/` directory), numbered in the order in which they should be run;
 -   shell scripts running the R Markdown notebooks with appropriate parameters, if any (`bash/` directory).
 
 The `data/` directory contains:
 
--   the raw performance data (`raw/` directory);
+-   the raw performance data (`raw/` directory), organized by subject index;
+    -   the performance data from the experiment session (`experiment/` directory):
+        -   `triallog_*.csv` contains the raw trial-by-trial data (see codebook in `documents/content/codebook_triallog.csv`)
+        -   `blocklog_*.csv` contains the block-by-block summary statistics of performance data (see codebook in `documents/content/codebook_blocklog.csv`)
+        -   `runtimeinfo_*.csv` contains runtime from PsychoPy (see <https://www.psychopy.org/api/info.html>)
+    -   the performance data from the practice session (`practice/` directory):
+        -   contains files in same format as under `experiment/`
 -   the data derived from the raw data (`derivatives/` directory), organized by notebook name.
+    -   for meaning of output variables, see notebook templates (`analysis/*.Rmd`) and static reports (`reports/`)
+-   the simulated performance data (`simulations/` directory)
 
 The `documents/` directory contains:
 
--   documents describing the content of the experimental data (`content/` directory);
--   documents describing the context of the data (`context/` directory);
+-   documents describing the content of the experimental data (`content/` directory), such as codebooks;
+-   documents describing the context of the data (`context/` directory), such as ethics documents and preregistration;
 -   documents related to the report of this research project (`manuscript/` directory).
 
 The `figures/` directory contains:
@@ -64,6 +105,11 @@ The `figures/` directory contains:
 The `man/` directory contains:
 
 -   documentation of objects inside the package, generated by `roxygen2`.
+
+The `opt` directory contains:
+
+-   MATLAB packages the research compendium depends on, including packages for:
+    -   making multipanel figures (`panel/`);
 
 The `packrat/` directory contains:
 
@@ -143,7 +189,7 @@ devtools::session_info()
 #>  collate  en_US.UTF-8                 
 #>  ctype    en_US.UTF-8                 
 #>  tz       Europe/Amsterdam            
-#>  date     2019-06-12                  
+#>  date     2019-06-19                  
 #> 
 #> ─ Packages ──────────────────────────────────────────────────────────────
 #>  package     * version date       lib source        
@@ -192,7 +238,7 @@ devtools::session_info()
 #> [3] /Users/bramzandbelt/surfdrive/projects/irmass/packrat/lib-R/x86_64-apple-darwin15.6.0/3.6.0
 ```
 
-Packrat takes care of dependencies.
+For a complete list of the packrat Packrat takes care of dependencies.
 
 Acknowledgment
 --------------
