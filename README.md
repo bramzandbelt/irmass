@@ -243,7 +243,29 @@ For a complete list of the packrat Packrat takes care of dependencies.
 Acknowledgment
 --------------
 
-Thanks to Ben Marwick for inspiration on [how to create, organize, and describe research compendia](https://github.com/benmarwick/researchcompendium).
+This research project was funded through a James McDonnell Scholar Award (grant number 220020328) to Roshan Cools. We thank Roshan Cools (RC) for financial support and constructive feedback and Alexandra Sebastian (AS) for providing statistical parametric maps for the purpose of sample size estimation. We thank Ben Marwick for inspiration on [how to create, organize, and describe research compendia](https://github.com/benmarwick/researchcompendium).
+
+Contributor roles
+-----------------
+
+We specify the contribution of all people involved in the research (contributing non-authors included), according to the [Contributor Role Taxonomy](https://www.casrai.org/credit/).
+
+|                              | BBZ | RvdB | RC  |
+|------------------------------|-----|------|-----|
+| Conceptualization            | X   | -    | -   |
+| Methodology                  | X   | -    | -   |
+| Software                     | X   | -    | -   |
+| Validation                   | X   | -    | -   |
+| Formal analysis              | X   | -    | -   |
+| Investigation                | -   | X    | -   |
+| Resources                    | X   | -    | -   |
+| Data curation                | X   | -    | -   |
+| Writing - original draft     | X   | -    | -   |
+| Writing - review and editing | X   | X    | -   |
+| Visualization                | X   | -    | -   |
+| Supervision                  | X   | -    | -   |
+| Project administration       | -   | X    | -   |
+| Funding acquisition          | -   | -    | X   |
 
 Contact
 -------
