@@ -21,11 +21,13 @@ notebook_file <-
          "5" = "05_individual_analysis_effect_ssd_on_stoprespond_rt.Rmd",
          "6" = "06_group_analysis_effect_ssd_on_prob_responding_given_stopsignal.Rmd",
          "7" = "07_group_analysis_rt_difference_nosignal_stoprespond.Rmd",
-         "8" = "08_group_analysis_effect_ssd_on_stoprespond_rt.Rmd"
+         "8" = "08_group_analysis_effect_ssd_on_stoprespond_rt.Rmd",
+         "9" = "09_exploration_support_for_hypotheses_under_different_bayes_factor_criteria.Rmd",
+         "10" = "10_exploration_support_for_hypotheses_under_different_priors.Rmd"
          )
 
 # Define input dir (notebook_templates_dir) and output dir (reports_dir)
-notebook_dir <- "analysis"
+notebook_dir <- "analysis/notebooks_and_scripts"
 reports_dir <- "reports"
 
 # Reports are not parameterized ----

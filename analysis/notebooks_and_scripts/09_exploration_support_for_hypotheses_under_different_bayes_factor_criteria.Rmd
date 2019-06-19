@@ -1,0 +1,341 @@
+---
+params:
+  title: "09_exploration_support_for_hypotheses_under_different_bayes_factor_criteria"
+title: '`r stringr::str_replace_all(params$title, pattern = "_", replacement = " ")`'
+author: "Bram B. Zandbelt"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true 
+    number_sections: true
+    depth: 4
+    df_print: paged
+    theme: readable
+    highlight: pygments
+---
+
+```{r setup, include=FALSE}
+# Set root dir to project directory to ensure that code is always run relative to the project directory, no matter if it is run using `knitr` or interactively.
+knitr::opts_knit$set(root.dir = rprojroot::find_root(rprojroot::has_file("DESCRIPTION")))
+
+# Attach tideverse package to enable access to pipe (%>%)
+require(tidyverse)
+
+# Attach BayesFactor to prevent the following error:
+# 'Error in if (length(models) > options()$BFMaxModels) stop("Maximum number of models exceeded (",  : argument is of length zero'
+require(BayesFactor)
+```
+
+# Overview
+This notebook contains the exploratory analyses answer the question: How do findings change when more stringent Bayes factor criteria that are more often used and recommended in the literature?
+
+# Preliminaries
+
+## Identify the project directory
+All paths in the code are relative to the project directory.
+```{r Define project directory}
+project_dir <- rprojroot::find_root(rprojroot::has_file("DESCRIPTION"))
+```
+
+## Verify existence of output directories
+```{r Define and verify existence of output directories}
+
+derivatives_dir <- file.path(project_dir,"data","derivatives")
+figures_dir <- file.path(project_dir, "figures")
+notebook_name <- params$title
+
+irmass::verify_output_dirs(base_dirs = list(derivatives_dir, figures_dir),
+                   notebook_name = notebook_name)
+```
+
+# Read data
+```{r Specify column types for reading data}
+
+# Column types - prediction 1 - (probability of responding bimanually increases with stop-signal delay)
+col_spec_prd1 <- 
+  readr::cols(subjectIx = readr::col_integer(),
+              model = readr::col_character(),
+              B = readr::col_double(),
+              logB = readr::col_double(),
+              label = readr::col_character(),
+              mean_beta0 = readr::col_double(),
+              mean_beta = readr::col_double()
+              )
+
+# Column types - prediction 2 - (response times are shorter on stop-respond vs. no-signal trials)
+col_spec_prd2 <- 
+  readr::cols(subjectIx = readr::col_integer(),
+              model = readr::col_character(),
+              B = readr::col_double(),
+              logB = readr::col_double(),
+              label = readr::col_character()
+              )
+
+# Column types - prediction 3 - (stop-respond response time increases with stop-signal delay)
+col_spec_prd3 <- 
+  readr::cols(subjectIx = readr::col_integer(),
+              B_null_vs_full = readr::col_double(),
+              B_null_vs_order_restricted = readr::col_double(),
+              B_rank_null_vs_full = readr::col_integer(),
+              B_rank_null_vs_order_restricted = readr::col_integer()
+              )
+```
+
+## Prediction 1
+
+### Action-selective stop trials
+```{r Read data - prediction 1 - action-selective stop trials}
+bf_prd1_as <- 
+  readr::read_csv(file.path(derivatives_dir, 
+                            "03_individual_analysis_effect_ssd_on_prob_responding_given_stopsignal", 
+                            "analysis_outputs_03_individual_analysis_effect_ssd_on_prob_responding_given_stopsignal_action_selective_stopping_b01_param.csv"),
+                  col_types = col_spec_prd1
+                  )
+```
+
+### Stimulus-selective stop trials
+```{r Read data - prediction 1 - stimulus-selective stop trials}
+bf_prd1_ss <- 
+  readr::read_csv(file.path(derivatives_dir, 
+                            "03_individual_analysis_effect_ssd_on_prob_responding_given_stopsignal", 
+                            "analysis_outputs_03_individual_analysis_effect_ssd_on_prob_responding_given_stopsignal_stimulus_selective_stopping_b01_param.csv"),
+                  col_types = col_spec_prd1
+                  )
+```
+
+## Prediction 2
+
+### Action-selective stop trials
+```{r Read data - prediction 2 - action-selective stop trials}
+bf_prd2_as <- 
+  readr::read_csv(file.path(derivatives_dir, 
+                            "04_individual_analysis_rt_difference_nosignal_stoprespond", 
+                            "analysis_outputs_04_individual_analysis_rt_difference_nosignal_stoprespond_action_selective_stopping_b01.csv"),
+                  col_types = col_spec_prd2
+                  )
+```
+
+### Stimulus-selective stop trials
+```{r Read data - prediction 2 - stimulus-selective stop trials}
+bf_prd2_ss <- 
+  readr::read_csv(file.path(derivatives_dir, 
+                            "04_individual_analysis_rt_difference_nosignal_stoprespond", 
+                            "analysis_outputs_04_individual_analysis_rt_difference_nosignal_stoprespond_stimulus_selective_stopping_b01.csv"),
+                  col_types = col_spec_prd2
+                  )
+```
+
+## Prediction 3
+
+### Action-selective stop trials
+```{r Read data - prediction 3 - action-selective stop trials}
+bf_prd3_as <- 
+  readr::read_csv(file.path(derivatives_dir, 
+                            "05_individual_analysis_effect_ssd_on_stoprespond_rt", 
+                            "analysis_outputs_05_individual_analysis_effect_ssd_on_stoprespond_rt_action_selective_stopping_b_null_vs_full_and_bf_null_vs_order_restricted.csv"),
+                  col_types = col_spec_prd3
+                  )
+```
+
+### Stimulus-selective stop trials
+```{r Read data - prediction 2 - stimulus-selective stop trials}
+bf_prd3_ss <- 
+  readr::read_csv(file.path(derivatives_dir, 
+                            "05_individual_analysis_effect_ssd_on_stoprespond_rt", 
+                            "analysis_outputs_05_individual_analysis_effect_ssd_on_stoprespond_rt_stimulus_selective_stopping_b_null_vs_full_and_bf_null_vs_order_restricted.csv"),
+                  col_types = col_spec_prd3
+                  )
+```
+
+# Data cleaning and processing
+
+Function for selecting relevant columns
+```{r Function for selecting relevant columns}
+clean_bf_data <- function(tibb, prd_id, stop_type) {
+  
+  # Select columns and rename if needed
+  if (prd_id == 1) { 
+    out <- 
+      tibb %>%
+      dplyr::select(subjectIx, B)
+  } else if (prd_id == 2) {
+    out <- 
+      tibb %>%
+      dplyr::select(subjectIx, B)
+  } else if (prd_id == 3) {
+    out <- 
+      tibb %>%
+      dplyr::select(subjectIx, B_null_vs_order_restricted) %>%
+      dplyr::rename(B = B_null_vs_order_restricted)
+  }
+  
+  out %>%
+    # Add columns with prediction ID and stop-type
+    dplyr::mutate(prd = prd_id,
+                  stop_type = stop_type) %>%
+    
+    # Reorder columns
+    dplyr::select(subjectIx, prd, stop_type, dplyr::everything())
+}
+```
+
+Clean data
+```{r Clean data}
+bf_prd1_as_clean <- clean_bf_data(bf_prd1_as, prd_id = 1, stop_type = 'action-selective')
+bf_prd1_ss_clean <- clean_bf_data(bf_prd1_ss, prd_id = 1, stop_type = 'stimulus-selective')
+bf_prd2_as_clean <- clean_bf_data(bf_prd2_as, prd_id = 2, stop_type = 'action-selective')
+bf_prd2_ss_clean <- clean_bf_data(bf_prd2_ss, prd_id = 2, stop_type = 'stimulus-selective')
+bf_prd3_as_clean <- clean_bf_data(bf_prd3_as, prd_id = 3, stop_type = 'action-selective')
+bf_prd3_ss_clean <- clean_bf_data(bf_prd3_ss, prd_id = 3, stop_type = 'stimulus-selective')
+```
+
+Merge data & classify based on lenient (B < 1 vs. B > 1) and stringent criteria (B < 1/3, 1/3 < B < 3, B > 3)
+```{r Merge data and classify into lenient and stringent categories}
+(plot_input_data <- 
+  dplyr::bind_rows(bf_prd1_as_clean, bf_prd1_ss_clean,
+                   bf_prd2_as_clean, bf_prd2_ss_clean,
+                   bf_prd3_as_clean, bf_prd3_ss_clean) %>%
+  dplyr::mutate(prd = factor(prd, 
+                             levels = c(1,2,3),
+                             labels = c("prediction 1", "prediction 2", "prediction 3"),
+                             ordered = TRUE),
+                lenient = cut(B,
+                              breaks = c(1/Inf,1,Inf),
+                              labels = c('supporting race model',
+                                         'supporting null model'
+                                         )
+                              ),
+                stringent = cut(B,
+                                breaks = c(1/Inf, 1/3, 1, 3, Inf),
+                                labels = c('supporting race model',
+                                           'inconclusive, supporting race model',
+                                           'inconclusive, supporting null model',
+                                           'supporting null model')
+                              )
+                ) %>%
+   tidyr::gather(key = "criterion", 
+                 value = "classification", 
+                 factor_key = TRUE,
+                 lenient, stringent) %>%
+   dplyr::mutate(criterion = factor(criterion, levels = c("lenient", "stringent")),
+                 classification = factor(classification, levels = rev(c('supporting race model',
+                                                                    'inconclusive, supporting race model',
+                                                                    'inconclusive, supporting null model',
+                                                                    'supporting null model'))
+                                         )
+                 ) %>%
+   dplyr::group_by(prd, stop_type, criterion, classification) %>%
+   dplyr::summarize(n = n()) %>% 
+   dplyr::mutate(pct = n/sum(n))
+)
+```
+
+# Data visualization
+
+```{r Plot data}
+(plt_pct <- 
+   ggplot2::ggplot(plot_input_data,
+                   ggplot2::aes(x = criterion,
+                                y = pct,
+                                fill = classification,
+                                label = pct
+                   )
+   ) + 
+   ggplot2::facet_grid(stop_type ~ prd) + 
+   ggplot2::geom_bar(stat = "identity") +
+   
+   ggplot2::geom_text(ggplot2::aes(label = scales::percent(round(pct,2))),
+                      #format(100*pct, digits=1, drop0trailing=FALSE)),
+                      size = 3, position = ggplot2::position_stack(vjust = 0.5),
+                      color = 'white') +
+   ggplot2::scale_x_discrete(name = "Bayes factor criterion") +
+   ggplot2::scale_y_continuous(labels = scales::percent,
+                               name = "Percentage") +
+   ggplot2::scale_fill_manual(values = c("supporting race model" = "#91bfdb",
+                                         "inconclusive, supporting race model" = "#c8dfcd",
+                                         "inconclusive, supporting null model" = "#fdc68c",
+                                         "supporting null model" = "#fc8d59"
+   )
+   )  +
+   irmass::theme_irmass()) + 
+  ggplot2::theme(legend.title = ggplot2::element_blank(),
+                 legend.position = "bottom",
+                 legend.direction = "vertical")
+```
+
+Figure title
+```{r Define figure title}
+plt_title <- "Support for and against the independent race model for action- and stimulus-selective stopping under lenient and more stringent Bayes factor criteria."
+```
+
+Figure description
+```{r Define figure description}
+plt_description <- "Each panel shows the percentage of participants providing support for or against the independent race model for the different types of selective stopping (rows) and independent race model predictions (columns), under lenient Bayes factor criteria (left; $B_{01} < 1$ means support for the independent race model, $B_{01} > 1$ means support against the independent race model) or more stringent criteria (right; $B_{01} < 1/3$ means support for the independent race model, $B_{01} > 3$ means support against the independent race model, $1/3 > B_{01} > 3$ means inconclusive evidence)."
+```
+
+# Write data to disk
+
+## Plot input data
+
+```{r Write to disk - plot input data}
+readr::write_csv(plot_input_data,
+                 path = file.path(derivatives_dir, 
+                                  notebook_name, 
+                                  paste('plot_inputs',
+                                        notebook_name,
+                                        'action_and_stimulus_selective_stopping',
+                                        'bf_criteria_data.csv', 
+                                        sep = '_')
+                                  ),
+                 col_names = TRUE)
+```
+
+
+## Plot output data
+
+```{r Write to disk - figure}
+
+# Figure
+filename_plt <- 
+  paste('plot',
+        notebook_name,
+        'action_and_stimulus_selective_stopping.pdf',
+        sep = '_')
+
+ggplot2::ggsave(plot = plt_pct,
+                path = file.path(figures_dir, notebook_name),
+                filename = filename_plt,
+                device = "pdf",
+                width = 8,
+                height = 10,
+                units = 'cm'
+                )
+
+# Figure caption
+irmass::write_fig_cap(
+  fig_title = plt_title, 
+  fig_description = plt_description, 
+  fig_dir = figures_dir, 
+  notebook_name = notebook_name, 
+  stopping_type = "action_and_stimulus_selective")
+```
+
+# Upload data to figShare
+
+```{r Upload data to figShare - plot of action-selective stopping}
+if (irmass::get_figshare_specs('do_upload')) {
+  
+  (article_id_plt <- 
+    rfigshare::fs_new_article(title = plt_title,
+                              description = plt_description,
+                              type = 'figure',
+                              authors = irmass::get_figshare_specs('authors'),
+                              tags = irmass::get_figshare_specs('tags'),
+                              links = irmass::get_figshare_specs('links'),
+                              files = file.path(figures_dir, notebook_name, filename_plt),
+                              visibility = irmass::get_figshare_specs('visibility')
+                              )
+   )
+}
+```

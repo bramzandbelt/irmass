@@ -35,4 +35,9 @@ sh analysis/bash/08_group_analysis_effect_ssd_on_stoprespond_rt.sh
 
 # 4. Exploratory analyses ######################################################
 
+# Verify support for and against independent race model under different Bayes factor criteria
+sh analysis/bash/09_exploration_support_for_hypotheses_under_different_bayes_factor_criteria.sh
+
+# Verify support for and against independent race model under different priors
+sh analysis/bash/10_exploration_support_for_hypotheses_under_different_priors.sh
 
