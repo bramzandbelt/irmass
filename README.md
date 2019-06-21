@@ -1,5 +1,5 @@
 <!-- README.md is generated from README.Rmd. Please edit that file -->
-[![Last-changedate](https://img.shields.io/badge/last%20change-2019--06--19-brightgreen.svg)](https://github.com/bramzandbelt/irmass/commits/master) [![minimal R version](https://img.shields.io/badge/R%3E%3D-3.6.0-brightgreen.svg)](https://cran.r-project.org/) [![Task DOI](https://zenodo.org/badge/49258308.svg)](https://zenodo.org/badge/latestdoi/49258308) [![Licence](https://img.shields.io/github/license/mashape/apistatus.svg)](http://choosealicense.com/licenses/mit/) [![ORCiD](https://img.shields.io/badge/ORCiD-0000--0002--6491--1247-green.svg)](https://orcid.org/0000-0002-6491-1247)
+[![Last-changedate](https://img.shields.io/badge/last%20change-2019--06--21-brightgreen.svg)](https://github.com/bramzandbelt/irmass/commits/master) [![minimal R version](https://img.shields.io/badge/R%3E%3D-3.6.0-brightgreen.svg)](https://cran.r-project.org/) [![Task DOI](https://zenodo.org/badge/49258308.svg)](https://zenodo.org/badge/latestdoi/49258308) [![Licence](https://img.shields.io/github/license/mashape/apistatus.svg)](http://choosealicense.com/licenses/mit/) [![ORCiD](https://img.shields.io/badge/ORCiD-0000--0002--6491--1247-green.svg)](https://orcid.org/0000-0002-6491-1247)
 
 irmass - Research compendium for the report on independent race model analysis of selective stopping by Zandbelt & Van den Bosch
 ================================================================================================================================
@@ -40,7 +40,6 @@ This research compendium contains all data, code, and text associated with the a
     │   └── notebooks_and_scripts
     ├── data
     │   ├── derivatives
-    │   ├── raw
     │   └── simulations
     ├── documents
     │   ├── content
@@ -81,16 +80,11 @@ The `analysis/` directory contains:
 
 The `data/` directory contains:
 
--   the raw performance data (`raw/` directory), organized by subject index;
-    -   the performance data from the experiment session (`experiment/` directory):
-        -   `triallog_*.csv` contains the raw trial-by-trial data (see codebook in `documents/content/codebook_triallog.csv`)
-        -   `blocklog_*.csv` contains the block-by-block summary statistics of performance data (see codebook in `documents/content/codebook_blocklog.csv`)
-        -   `runtimeinfo_*.csv` contains runtime from PsychoPy (see <https://www.psychopy.org/api/info.html>)
-    -   the performance data from the practice session (`practice/` directory):
-        -   contains files in same format as under `experiment/`
 -   the data derived from the raw data (`derivatives/` directory), organized by notebook name.
-    -   for meaning of output variables, see notebook templates (`analysis/*.Rmd`) and static reports (`reports/`)
+    -   for meaning of output variables, see the codebooks of the notebook `01_preprocess_log_files` (`documents/content/01_preprocess_log_files/`), the notebooks (`analysis/*.Rmd`), and static reports (`reports/`)
 -   the simulated performance data (`simulations/` directory)
+
+N.B. The raw data is not shared, because it contains information about date and time on which the session took place, potentially allowing for identification of participants (e.g. by participants themselves). However, the raw data are archived at the Donders Center for Cognitive Neuroimaging under project number 3017031.05
 
 The `documents/` directory contains:
 
@@ -170,8 +164,6 @@ Manuscript: CC-BY-4.0 <http://creativecommons.org/licenses/by/4.0/>
 
 Code: MIT <http://opensource.org/licenses/MIT>, year: 2019, copyright holder: Bram B. Zandbelt
 
-Data: Data Use Agreement of Donders Institute <!-- TODO: Add URL -->
-
 Dependencies
 ------------
 
@@ -189,7 +181,7 @@ devtools::session_info()
 #>  collate  en_US.UTF-8                 
 #>  ctype    en_US.UTF-8                 
 #>  tz       Europe/Amsterdam            
-#>  date     2019-06-19                  
+#>  date     2019-06-21                  
 #> 
 #> ─ Packages ──────────────────────────────────────────────────────────────
 #>  package     * version date       lib source        
