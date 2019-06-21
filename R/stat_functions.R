@@ -70,7 +70,7 @@ compute_ssrt <- function(tibb, for_each_ssd = FALSE) {
                                           .f = function(data) {
                                             1 - mean(data$trialCorrect)
                                             }),
-                  true_ssrt = purrr::pmap_dbl(.l = list(data = .$data),
+                  actual_ssrt = purrr::pmap_dbl(.l = list(data = .$data),
                                               .f = function(data) {
                                                 median(data$SSRT_true, na.rm = TRUE)
                                               })
@@ -104,19 +104,10 @@ compute_ssrt <- function(tibb, for_each_ssd = FALSE) {
     dplyr::select(RT_trial) %>%
     dplyr::pull()
 
-  # ignore_rt <-
-  #   tibb %>%
-  #   dplyr::filter(trial == 'IG') %>%
-  #   # dplyr::filter(trial_alt == 'NS',
-  #   #               r_bi == TRUE) %>%
-  #   dplyr::select(RT_trial) %>%
-  #   dplyr::pull()
-
   p_respond <-
     p_respond %>%
     dplyr::mutate(ft = quantile(no_signal_rt, probs = p_respond, na.rm = TRUE) * 1000,
-                  ssrt = ft - t_d)
-
+                  estimated_ssrt = ft - t_d)
 
   p_respond
 
