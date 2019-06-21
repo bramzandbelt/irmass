@@ -4,7 +4,6 @@ inst/doc
 .httr-oauth
 .RData
 .Rhistory
-*.html
 
 # Raw data and lab notebook
 data/raw/*
