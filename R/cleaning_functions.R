@@ -635,7 +635,29 @@ get_col_types <- function(file_type){
                             criterion = readr::col_factor(levels = c("NS_accuracy","NS_mean_RT","NS_mean_RTdiff","SL_accuracy","SR_accuracy","SB_accuracy","IG_accuracy")),
                             performance = readr::col_double(),
                             failed = readr::col_logical()
-           )
+           ),
+         sim_trial_data =
+           readr::cols_only(subjectIx = readr::col_integer(),
+                            blockIx = readr::col_integer(),
+                            trialIx = readr::col_integer(),
+                            trial = readr::col_factor(levels = c("NS", "SL", "SR", "SB", "IG"),
+                                                      ordered = FALSE
+                            ),
+                            trial_alt = readr::col_factor(levels = c("SAS", "SSS", "NS"),
+                                                          ordered = TRUE
+                            ),
+                            r = readr::col_character(),
+                            responseType = readr::col_character(),
+                            t_d = readr::col_double(),
+                            t_d_alt = readr::col_factor(levels = c("short", "intermediate", "long"),
+                                                        ordered = TRUE
+                                                        ),
+                            r_bi = readr::col_logical(),
+                            RT_trial = readr::col_double(),
+                            SSRT_true = readr::col_double(),
+                            trialCorrect = readr::col_logical(),
+                            trial_performance = col_character()
+                            )
          )
 
 }
