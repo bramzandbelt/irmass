@@ -226,7 +226,8 @@ plot_overview <- function(data, xvar, xvardesc, yorder, yticklabels, fillvar, fi
 #' @param bvar Bayes factor variable
 #' @param plot_orientation horizontal or vertical
 #' @param bf_as_background whether or not plot background should encodes Bayes Factor
-plot_idv_rt_data_bf <- function(trial_data, bf_data, summary_data, colorbar, xvar, bvar, plot_orientation, bf_as_background) {
+#' @param tag_subjectIx Whether or not to tag panels with subjectIx
+plot_idv_rt_data_bf <- function(trial_data, bf_data, summary_data, colorbar, xvar, bvar, plot_orientation, bf_as_background, tag_subjectIx = TRUE) {
 
   # Main variables (x, y, fill, label) -----------------------------------------
   plt <- ggplot2::ggplot(trial_data,
@@ -338,17 +339,19 @@ plot_idv_rt_data_bf <- function(trial_data, bf_data, summary_data, colorbar, xva
         )
 
     } else if (plot_orientation == 'horizontal') {
-      plt <-
-        plt +
-        ggplot2::geom_text(mapping = ggplot2::aes(label = subjectIx),
-                           x = 1,
-                           y = Inf,
-                           hjust = 1,
-                           vjust = 1,
-                           size = 2.5,
-                           fontface = "plain"
-                           )
 
+      if (tag_subjectIx) {
+        plt <-
+          plt +
+          ggplot2::geom_text(mapping = ggplot2::aes(label = subjectIx),
+                             x = 1,
+                             y = Inf,
+                             hjust = 1,
+                             vjust = 1,
+                             size = 2.5,
+                             fontface = "plain"
+          )
+      }
     }
 
   # Scales  --------------------------------------------------------------------
@@ -486,8 +489,9 @@ plot_idv_rt_data_bf <- function(trial_data, bf_data, summary_data, colorbar, xva
 #' @param colorbar Color bar variables
 #' @param yvar y axis variable
 #' @param bvar Bayes factor variable
+#' @param tag_subjectIx Whether or not to tag panels with subjectIx
 #' @export
-plot_if_idv <- function(obs_data, prd_data, bf_data, colorbar, yvar, bvar) {
+plot_if_idv <- function(obs_data, prd_data, bf_data, colorbar, yvar, bvar, tag_subjectIx = TRUE) {
 
   # Add Bayes Factor data to tibble with observed response probabilities
   obs_data <-
@@ -532,15 +536,20 @@ plot_if_idv <- function(obs_data, prd_data, bf_data, colorbar, yvar, bvar) {
     ggplot2::geom_line(data = prd_data,
                        ggplot2::aes(x = x,
                                     y = y)
-                       ) +
-    ggplot2::geom_text(mapping = ggplot2::aes(label = subjectIx),
-                       x = Inf,
-                       y = 0,
-                       hjust = 1,
-                       vjust = 0,
-                       size = 2.5,
-                       fontface = "plain"
                        )
+
+  if (tag_subjectIx) {
+    plt <-
+      plt +
+      ggplot2::geom_text(mapping = ggplot2::aes(label = subjectIx),
+                         x = Inf,
+                         y = 0,
+                         hjust = 1,
+                         vjust = 0,
+                         size = 2.5,
+                         fontface = "plain"
+      )
+  }
 
     # ggplot2::geom_text(data = bf_data,
     #                    ggplot2::aes(label = fancy_scientific(B)),
@@ -551,7 +560,6 @@ plot_if_idv <- function(obs_data, prd_data, bf_data, colorbar, yvar, bvar) {
     #                    size = 2,
     #                    parse = TRUE
     #                    )
-
 
   # Scales  --------------------------------------------------------------------
 
@@ -654,8 +662,11 @@ plot_if_grp <- function(obs, prd) {
 #'
 #' @param trial_data tibble containing trial-level data
 #' @param bf_data tibble containing subject-level Bayes factor data
+#' @param plot_orientation horizontal or vertical plot
+#' @param bf_as_background whether or not to map Bayes Factor onto panel background color
+#' @param tag_subjectIx whether or not to tag panels with subjectIx
 #' @export
-plot_srrt_vs_nsrt_idv <- function(trial_data, bf_data, plot_orientation = 'vertical', bf_as_background = TRUE) {
+plot_srrt_vs_nsrt_idv <- function(trial_data, bf_data, plot_orientation = 'vertical', bf_as_background = TRUE, tag_subjectIx = TRUE) {
 
   # Get colorbar variables for visualizaing Bayes factor data
   colorbar <- get_bf_colorbar_vars()
@@ -709,7 +720,9 @@ plot_srrt_vs_nsrt_idv <- function(trial_data, bf_data, plot_orientation = 'verti
                              xvar = 'trial_alt',
                              bvar = 'B',
                              plot_orientation = plot_orientation,
-                             bf_as_background = bf_as_background)
+                             bf_as_background = bf_as_background,
+                             tag_subjectIx = tag_subjectIx
+                             )
 
 }
 
@@ -747,8 +760,9 @@ plot_srrt_vs_nsrt_grp <- function(data, sr, ns) {
 
 #' Plot stop-respond RT vs. stop-signal delay for individual-level data
 #'
+#' @param tag_subjectIx whether or not to tag panels with subjectIx
 #' @export
-plot_srrt_vs_ssd_idv <- function(trial_data, bf_data, plot_orientation = 'vertical', bf_as_background = TRUE) {
+plot_srrt_vs_ssd_idv <- function(trial_data, bf_data, plot_orientation = 'vertical', bf_as_background = TRUE, tag_subjectIx = TRUE) {
 
   # Preliminaries  -------------------------------------------------------------
 

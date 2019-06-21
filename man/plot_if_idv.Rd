@@ -4,7 +4,8 @@
 \alias{plot_if_idv}
 \title{Plot inhibition function for individual-level data}
 \usage{
-plot_if_idv(obs_data, prd_data, bf_data, colorbar, yvar, bvar)
+plot_if_idv(obs_data, prd_data, bf_data, colorbar, yvar, bvar,
+  tag_subjectIx = TRUE)
 }
 \arguments{
 \item{obs_data}{tibble with observed response probabilities}
@@ -18,6 +19,8 @@ plot_if_idv(obs_data, prd_data, bf_data, colorbar, yvar, bvar)
 \item{yvar}{y axis variable}
 
 \item{bvar}{Bayes factor variable}
+
+\item{tag_subjectIx}{Whether or not to tag panels with subjectIx}
 }
 \description{
 Plots the probability of responding given a stop-signal against stop-signal delay, a histogram of the number stop-inhibit and stop-respond trials for each stop-signal delay, and a logistic regression fit to the data.

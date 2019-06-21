@@ -5,7 +5,10 @@
 \title{Plot stop-respond RT vs. stop-signal delay for individual-level data}
 \usage{
 plot_srrt_vs_ssd_idv(trial_data, bf_data, plot_orientation = "vertical",
-  bf_as_background = TRUE)
+  bf_as_background = TRUE, tag_subjectIx = TRUE)
+}
+\arguments{
+\item{tag_subjectIx}{whether or not to tag panels with subjectIx}
 }
 \description{
 Plot stop-respond RT vs. stop-signal delay for individual-level data

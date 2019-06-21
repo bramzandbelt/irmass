@@ -5,7 +5,7 @@
 \title{Function for plotting response time and Bayes factor data from individual-level analyses}
 \usage{
 plot_idv_rt_data_bf(trial_data, bf_data, summary_data, colorbar, xvar,
-  bvar, plot_orientation, bf_as_background)
+  bvar, plot_orientation, bf_as_background, tag_subjectIx = TRUE)
 }
 \arguments{
 \item{trial_data}{tibble with trial data}
@@ -21,6 +21,8 @@ plot_idv_rt_data_bf(trial_data, bf_data, summary_data, colorbar, xvar,
 \item{plot_orientation}{horizontal or vertical}
 
 \item{bf_as_background}{whether or not plot background should encodes Bayes Factor}
+
+\item{tag_subjectIx}{Whether or not to tag panels with subjectIx}
 }
 \description{
 This function is used to compare response times between signal-respond and no-signal trials and to compare response times on signal-respond trials across different stop-signal delay categories.

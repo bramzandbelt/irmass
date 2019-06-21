@@ -5,12 +5,18 @@
 \title{Plot stop-respond RT vs. no-signal RT for individual-level data}
 \usage{
 plot_srrt_vs_nsrt_idv(trial_data, bf_data, plot_orientation = "vertical",
-  bf_as_background = TRUE)
+  bf_as_background = TRUE, tag_subjectIx = TRUE)
 }
 \arguments{
 \item{trial_data}{tibble containing trial-level data}
 
 \item{bf_data}{tibble containing subject-level Bayes factor data}
+
+\item{plot_orientation}{horizontal or vertical plot}
+
+\item{bf_as_background}{whether or not to map Bayes Factor onto panel background color}
+
+\item{tag_subjectIx}{whether or not to tag panels with subjectIx}
 }
 \description{
 Plot stop-respond RT vs. no-signal RT for individual-level data
