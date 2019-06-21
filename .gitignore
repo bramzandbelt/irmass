@@ -5,3 +5,7 @@ inst/doc
 .RData
 .Rhistory
 *.html
+
+# Raw data and lab notebook
+data/raw/*
+documents/content/raw/lab_notebook.md
