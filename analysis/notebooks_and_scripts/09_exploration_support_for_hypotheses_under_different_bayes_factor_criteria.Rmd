@@ -139,7 +139,7 @@ bf_prd3_as <-
 ```
 
 ### Stimulus-selective stop trials
-```{r Read data - prediction 2 - stimulus-selective stop trials}
+```{r Read data - prediction 3 - stimulus-selective stop trials}
 bf_prd3_ss <- 
   readr::read_csv(file.path(derivatives_dir, 
                             "05_individual_analysis_effect_ssd_on_stoprespond_rt", 
