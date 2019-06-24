@@ -1,0 +1,3 @@
+mdl_class,mdl,B,logB,error,label
+null_vs_full,t_d_alt + subjectIx,1.812567361929981e-4,-8.61559609971735,0.005159855930883907,extreme evidence for H1
+null_vs_order_restricted,t_d_alt + subjectIx,3.020945603216635,1.1055698960248226,NA,moderate evidence for H0

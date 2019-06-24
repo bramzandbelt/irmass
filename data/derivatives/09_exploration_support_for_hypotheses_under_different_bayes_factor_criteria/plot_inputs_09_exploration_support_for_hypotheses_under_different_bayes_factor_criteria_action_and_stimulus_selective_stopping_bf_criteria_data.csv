@@ -1,0 +1,29 @@
+prd,stop_type,criterion,classification,n,pct
+prediction 1,action-selective,lenient,supporting race model,32,1
+prediction 1,action-selective,stringent,supporting race model,32,1
+prediction 1,stimulus-selective,lenient,supporting race model,32,1
+prediction 1,stimulus-selective,stringent,supporting race model,32,1
+prediction 2,action-selective,lenient,supporting null model,12,0.375
+prediction 2,action-selective,lenient,supporting race model,20,0.625
+prediction 2,action-selective,stringent,supporting null model,6,0.1875
+prediction 2,action-selective,stringent,"inconclusive, supporting null model",6,0.1875
+prediction 2,action-selective,stringent,"inconclusive, supporting race model",6,0.1875
+prediction 2,action-selective,stringent,supporting race model,14,0.4375
+prediction 2,stimulus-selective,lenient,supporting null model,8,0.25
+prediction 2,stimulus-selective,lenient,supporting race model,24,0.75
+prediction 2,stimulus-selective,stringent,supporting null model,4,0.125
+prediction 2,stimulus-selective,stringent,"inconclusive, supporting null model",4,0.125
+prediction 2,stimulus-selective,stringent,"inconclusive, supporting race model",9,0.28125
+prediction 2,stimulus-selective,stringent,supporting race model,15,0.46875
+prediction 3,action-selective,lenient,supporting null model,28,0.875
+prediction 3,action-selective,lenient,supporting race model,4,0.125
+prediction 3,action-selective,stringent,supporting null model,24,0.75
+prediction 3,action-selective,stringent,"inconclusive, supporting null model",4,0.125
+prediction 3,action-selective,stringent,"inconclusive, supporting race model",2,0.0625
+prediction 3,action-selective,stringent,supporting race model,2,0.0625
+prediction 3,stimulus-selective,lenient,supporting null model,22,0.6875
+prediction 3,stimulus-selective,lenient,supporting race model,10,0.3125
+prediction 3,stimulus-selective,stringent,supporting null model,16,0.5
+prediction 3,stimulus-selective,stringent,"inconclusive, supporting null model",6,0.1875
+prediction 3,stimulus-selective,stringent,"inconclusive, supporting race model",4,0.125
+prediction 3,stimulus-selective,stringent,supporting race model,6,0.1875
