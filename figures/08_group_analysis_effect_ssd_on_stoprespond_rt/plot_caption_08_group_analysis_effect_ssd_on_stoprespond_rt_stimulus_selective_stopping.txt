@@ -1,0 +1,1 @@
+Mean response time on stimulus-selective stop-respond trials as a function of stop-signal delay. Each data point is a participant. The diagnonal dashed line indicates mean stop-respond RT = mean no-signal RT. The vertical dotted line indicates the no-signal RT criterion (i.e. maximum mean RT allowed).

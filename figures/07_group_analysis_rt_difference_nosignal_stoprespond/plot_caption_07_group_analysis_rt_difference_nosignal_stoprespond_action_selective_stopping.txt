@@ -1,0 +1,1 @@
+Comparison of action-selective stop-respond and no-signal mean response time (RT). Each data point is a  participant. The diagnonal dashed line indicates mean stop-respond RT = mean no-signal RT. The vertical dotted line indicates the no-signal RT criterion (i.e. maximum mean RT allowed).
