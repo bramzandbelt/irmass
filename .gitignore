@@ -8,3 +8,4 @@ inst/doc
 # Raw data and lab notebook
 data/raw/*
 documents/content/raw/lab_notebook.md
+reports/01_*
