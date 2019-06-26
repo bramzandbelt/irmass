@@ -100,7 +100,7 @@ N.B. The raw data is not shared, because it contains information about date and 
 The `documents/` directory contains:
 
 - documents describing the content of the experimental data (`content/` directory), such as codebooks;
-- documents describing the context of the data (`context/` directory), such as ethics documents and preregistration;
+- documents describing the context of the data (`context/` directory), such as ethics documents, preregistration, and task instructions;
 - documents related to the report of this research project (`manuscript/` directory).
 
 The `figures/` directory contains:
