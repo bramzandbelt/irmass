@@ -1,5 +1,5 @@
 <!-- README.md is generated from README.Rmd. Please edit that file -->
-[![Last-changedate](https://img.shields.io/badge/last%20change-2019--06--26-brightgreen.svg)](https://github.com/bramzandbelt/irmass/commits/master) [![minimal R version](https://img.shields.io/badge/R%3E%3D-3.6.0-brightgreen.svg)](https://cran.r-project.org/) [![Task DOI](https://zenodo.org/badge/49258308.svg)](https://zenodo.org/badge/latestdoi/49258308) [![Licence](https://img.shields.io/github/license/mashape/apistatus.svg)](http://choosealicense.com/licenses/mit/) [![ORCiD](https://img.shields.io/badge/ORCiD-0000--0002--6491--1247-green.svg)](https://orcid.org/0000-0002-6491-1247)
+[![Last-changedate](https://img.shields.io/badge/last%20change-2019--06--26-brightgreen.svg)](https://github.com/bramzandbelt/irmass/commits/master) [![minimal R version](https://img.shields.io/badge/R%3E%3D-3.6.0-brightgreen.svg)](https://cran.r-project.org/) [![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.3257329.svg)](https://zenodo.org/badge/doi/10.5281/zenodo.3257329.svg) [![Licence](https://img.shields.io/github/license/mashape/apistatus.svg)](http://choosealicense.com/licenses/mit/) [![ORCiD](https://img.shields.io/badge/ORCiD-0000--0002--6491--1247-green.svg)](https://orcid.org/0000-0002-6491-1247)
 
 irmass - Research compendium for the report on independent race model analysis of selective stopping by Zandbelt & Van den Bosch
 ================================================================================================================================
@@ -7,7 +7,8 @@ irmass - Research compendium for the report on independent race model analysis o
 Compendium DOI
 --------------
 
-<!-- TODO: Add Zenodo DOI -->
+[DOI: 10.5281/zenodo.3257329](https://doi.org/10.5281/zenodo.3257329)
+
 The files at the URL above will generate the results as found in the preprint. The files hosted at <https://github.com/bramzandbelt/irmass> are the development versions and may have changed since the preprint was published.
 
 Author of this repository
